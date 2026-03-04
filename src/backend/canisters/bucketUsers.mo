@@ -3,36 +3,42 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
+import Timer "mo:core/Timer";
 import UserData "../models/todosUserData";
 import Identifiers "../shared/identifiers";
-import Interfaces "../shared/interfaces";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
+import MixinOpsOperations "mixins/mixinOpsOperations";
 
-shared ({ caller = owner }) persistent actor class UsersBucket() = this {
-    include MixinAllowedCanisters(owner);
+shared ({ caller = owner }) persistent actor class BucketUsers() = this {
+    include MixinOpsOperations({
+        coordinatorPrincipal    = owner;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
+    include MixinAllowedCanisters(coordinatorActor);
 
-    /////////////
-    // CONFIGS //
-    /////////////
-
-    let MAX_NUMBER_ENTRIES = 10_000_000; // TODO handle max number entries in handlerCreateUser
-
-    ////////////
-    // ERRORS //
-    ////////////
+    // ===== ERRORS =====
 
     let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
     let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
 
-    ////////////
-    // MEMORY //
-    ////////////
+    // ===== MEMORY =====
 
     let memoryUsers = Map.empty<Principal, UserData.UserData>();
 
-    ////////////
-    // SYSTEM //
-    ////////////
+    // ===== JOBS =====
+
+    ignore Timer.setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore Timer.recurringTimer<system>(#hours(24), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
+
+    // ===== SYSTEM =====
 
     type InspectParams = {
         arg: Blob;
@@ -52,9 +58,7 @@ shared ({ caller = owner }) persistent actor class UsersBucket() = this {
         }
     };
 
-    /////////
-    // API //
-    /////////
+    // ===== HANDLERS =====
 
     public shared func handlerGetUserData( userPrincipal: Principal ) : async Result.Result<UserData.SharableUserData, Text> {
         let ?userData = memoryUsers.get(userPrincipal) else return #err(ERR_USER_NOT_FOUND);

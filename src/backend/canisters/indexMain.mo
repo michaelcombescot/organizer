@@ -1,39 +1,51 @@
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
-import Error "mo:core/Error";
 import Runtime "mo:core/Runtime";
 import Debug "mo:core/Debug";
-import GroupsBucket "groupsBucket";
-import UsersBucket "usersBucket";
+import Timer "mo:core/Timer";
+import BucketGroups "bucketGroups";
+import BucketUsers "bucketUsers";
 import Identifiers "../shared/identifiers";
 import Group "../models/todosGroup";
 import UsersMapping "../shared/usersMapping";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
+import MixinOpsOperations "mixins/mixinOpsOperations";
 
 // only goal of this canister is too keep track of the relationship between users principals and canisters.
 // this is the main piece of code which should need to change in case of scaling needs (by adding new users buckets )
-shared ({ caller = owner }) persistent actor class MainIndex() = this {
+shared ({ caller = owner }) persistent actor class IndexMain() = this {
     let thisPrincipal = Principal.fromActor(this);
 
-    include MixinAllowedCanisters(owner);
+    include MixinOpsOperations({
+        coordinatorPrincipal    = owner;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
+    include MixinAllowedCanisters(coordinatorActor);
 
-    ////////////
-    // ERRORS //
-    ////////////
+    // ===== ERRORS =====
 
     let ERR_CANNOT_FIND_CURRENT_BUCKET = "ERR_CANNOT_FIND_CURRENT_BUCKET";
 
-    ////////////
-    // MEMORY //
-    ////////////
+    // ===== MEMORY =====
 
     var memoryUsersMapping: [Principal] = [];
 
-    var currentGroupBucket: ?GroupsBucket.GroupsBucket = null;
+    var currentGroupBucket: ?BucketGroups.BucketGroups = null;
 
-    ////////////
-    // SYSTEM //
-    ////////////
+    // ===== JOBS =====
+
+    ignore Timer.setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore Timer.recurringTimer<system>(#hours(24), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
+
+    // ===== SYSTEM =====
 
     type InspectParams = {
         arg: Blob;
@@ -64,24 +76,20 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
         memoryUsersMapping := mapping;
     };
 
-    ///////////////
-    // API USERS //
-    ///////////////
+    // ===== HANDLERS USERS =====
 
     public shared ({ caller }) func handlerFetchOrCreateUser() : async Result.Result<Principal, Text> {
         Debug.print("array: " # debug_show(memoryUsersMapping));
 
         let bucketPrincipal = UsersMapping.helperFetchUserBucket(memoryUsersMapping, caller);
 
-        switch ( await (actor(Principal.toText(bucketPrincipal)): UsersBucket.UsersBucket).handlerCreateUser({ userPrincipal = caller }) ) {
+        switch ( await (actor(Principal.toText(bucketPrincipal)): BucketUsers.BucketUsers).handlerCreateUser({ userPrincipal = caller }) ) {
             case (#ok()) #ok(bucketPrincipal);
             case (#err(e)) #err(e);
         }
     };
 
-    ////////////////
-    // API GROUPS //
-    ////////////////
+    // ===== HANDLERS GROUPS =====
 
     public shared ({ caller }) func handlerCreateGroup(params: Group.CreateGroupParams) : async Result.Result<Identifiers.Identifier, Text> {
         let ?bucket = await helperFetchCurrentGroupBucket() else return #err(ERR_CANNOT_FIND_CURRENT_BUCKET);
@@ -95,19 +103,15 @@ shared ({ caller = owner }) persistent actor class MainIndex() = this {
         }
     };
 
-    /////////////
-    // HELPERS //
-    /////////////
+    // ===== HELPERS =====
 
-    func helperFetchCurrentGroupBucket() : async ?GroupsBucket.GroupsBucket {
+    func helperFetchCurrentGroupBucket() : async ?BucketGroups.BucketGroups {
         switch ( currentGroupBucket ) {
             case (?_) ();
             case (null) {
-                try {
-                    let principal = await coordinatorActor.handlerGiveNewBucket({ bucketKind = #groupsBucket });
-                    currentGroupBucket := ?(actor(Principal.toText(principal)) : GroupsBucket.GroupsBucket);
-                } catch (e) {
-                    Runtime.trap( "Error while fetching bucket: " # Error.message(e) );
+                switch ( await coordinatorActor.handlerCreateBucket(#bucketGroups) ) {
+                    case (#ok(principal)) currentGroupBucket := ?(actor(Principal.toText(principal)) : BucketGroups.BucketGroups);
+                    case (#err(err)) Runtime.trap("Error while fetching new bucket: " # err);
                 };
             }
         };

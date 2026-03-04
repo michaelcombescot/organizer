@@ -5,29 +5,29 @@
       "type": "motoko"
     },
 
-    "indexesRegistry": {
-      "main": "src/backend/ops/indexesRegistry.mo",
+    "registryIndexes": {
+      "main": "src/backend/ops/registryIndexes.mo",
       "type": "motoko"
     },
 
-    "mainIndex": {
-      "main": "src/backend/canisters/mainIndex.mo",
+    "indexMain": {
+      "main": "src/backend/canisters/indexMain.mo",
       "type": "motoko"
     },
 
-    "usersBucket": {
-      "main": "src/backend/canisters/usersBucket.mo",
+    "bucketUsers": {
+      "main": "src/backend/canisters/bucketUsers.mo",
       "type": "motoko"
     },
 
-    "groupsBucket": {
-      "main": "src/backend/canisters/groupsBucket.mo",
+    "bucketGroups": {
+      "main": "src/backend/canisters/bucketGroups.mo",
       "type": "motoko"
     },
 
     "frontend": {
       "dependencies": [
-        "indexesRegistry"
+        "registryIndexes"
       ],
       "source": [
         "src/frontend/dist"

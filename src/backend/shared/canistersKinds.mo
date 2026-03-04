@@ -21,12 +21,12 @@ module {
     };
 
     public type IndexesKind = {
-        #mainIndex;
+        #indexMain;
     };
 
     public type BucketsKind = {
-        #groupsBucket;
-        #usersBucket;
+        #bucketGroups;
+        #bucketUsers;
     };
 
     public func compareCanistersKinds(a: CanistersKind, b: CanistersKind) : Order.Order {

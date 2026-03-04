@@ -8,23 +8,28 @@ import Todo "../models/todosTodo";
 import TodoList "../models/todosTodoList";
 import Group "../models/todosGroup";
 import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
+import MixinOpsOperations "mixins/mixinOpsOperations";
 import Blob "mo:core/Blob";
 import Iter "mo:core/Iter";
+import Timer "mo:core/Timer";
 
-shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
-    include MixinAllowedCanisters(owner);
-
+shared ({ caller = owner }) persistent actor class BucketGroups() = this {
     let thisPrincipal = Principal.fromActor(this);
 
-    /////////////
-    // CONFIGS //
-    /////////////
+    include MixinOpsOperations({
+        coordinatorPrincipal    = owner;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
+    include MixinAllowedCanisters(coordinatorActor);
+
+    // ===== CONFIGS =====
 
     let MAX_NUMBER_ENTRIES = 30_000;
     
-    ////////////
-    // ERRORS //
-    ////////////
+    // ===== ERRORS =====
 
     let ERR_FORBIDDEN           = "ERR_FORBIDDEN";
     let ERR_GROUP_NOT_FOUND     = "ERR_GROUP_NOT_FOUND";
@@ -32,17 +37,23 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     let ERR_TODOLIST_NOT_FOUND  = "ERR_TODOLIST_NOT_FOUND";
     let ERR_INVALID_CALLER      = "ERR_INVALID_CALLER";
     
-    ////////////
-    // MEMORY //
-    ////////////
+    // ===== MEMORY =====
 
     let memoryGroups = Map.empty<Nat, Group.Group>();
 
     var idGroupCounter = 0;
 
-    ////////////
-    // SYSTEM //
-    ////////////
+    // ===== JOBS =====
+
+    ignore Timer.setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore Timer.recurringTimer<system>(#hours(24), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
+
+    // ===== SYSTEM =====
 
     type InspectParams = {
         arg: Blob;
@@ -82,9 +93,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         }
     };
 
-    ////////////////
-    // API GROUPS //
-    ////////////////
+    // ===== HANDLERS GROUPS=====
 
     public shared ({ caller }) func handlerGetGroupDisplayData(groupID: Nat) : async Result.Result<Group.RespGetGroupDisplayData, Text> {
         let ?group = memoryGroups.get(groupID) else return #err(ERR_GROUP_NOT_FOUND);
@@ -107,7 +116,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
     };
 
     public shared ({ caller }) func handlerCreateGroup(userPrincipal: Principal, params: Group.CreateGroupParams) : async Result.Result<{ isFull: Bool; identifier: Identifiers.Identifier }, Text> {
-        if (await systemHelperIsCanisterAllowed(caller)) return #err(ERR_INVALID_CALLER);
+        if (await isCanisterAllowed(caller)) return #err(ERR_INVALID_CALLER);
 
         let group = Group.createGroup({ name = params.name; createdBy = userPrincipal; identifier = { id = idGroupCounter; bucket = thisPrincipal }; kind = params.kind; });
 
@@ -130,9 +139,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         #ok();
     };
 
-    ///////////////
-    // API TODOS //
-    ///////////////
+    // ===== HANDLERS TODOS =====
 
     public shared ({ caller }) func handlerCreateTodo(groupID: Nat, todo: Todo.Todo) : async Result.Result<Nat, [Text]> {
         let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);
@@ -185,9 +192,7 @@ shared ({ caller = owner }) persistent actor class GroupsBucket() = this {
         #ok()
     };
 
-    /////////////////////
-    // API TODOS LISTS //
-    /////////////////////
+    // ===== HANDLERS TODOS LISTS =====
 
     public shared ({ caller }) func handlerCreateTodosList(groupID: Nat, todoList: TodoList.TodoList) : async Result.Result<Nat, [Text]> {
         let ?group = memoryGroups.get(groupID) else return #err([ERR_GROUP_NOT_FOUND]);

@@ -3,23 +3,38 @@ import Blob "mo:core/Blob";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import List "mo:core/List";
+import Timer "mo:core/Timer";
 import CanistersKinds "../shared/canistersKinds";
+import MixinOpsOperations "../canisters/mixins/mixinOpsOperations";
 
 // only goal of this canister is too keep track of all the indexes and serve their principal to the frontend.
 // not dynamically created, if the need arise another instance will need to be declared in the dfx.json
-shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
-    
-    ////////////
-    // MEMORY //
-    ////////////
+shared ({ caller = owner }) persistent actor class RegistryIndexes() = this {
+    include MixinOpsOperations({
+        coordinatorPrincipal    = owner;
+        canisterPrincipal       = Principal.fromActor(this);
+        toppingThreshold        = 2_000_000_000_000;
+        toppingAmount           = 2_000_000_000_000;
+        toppingIntervalNs       = 20_000_000_000;
+    });
+
+    // ===== MEMORY =====
 
     var coordinatorPrincipal : ?Principal = null;
 
     let memoryIndexes = Map.empty<CanistersKinds.IndexesKind, List.List<Principal>>();
 
-    ////////////
-    // SYSTEM //
-    ////////////
+    // ===== JOBS =====
+
+    ignore Timer.setTimer<system>(
+        #seconds(0),
+        func () : async () {
+            ignore Timer.recurringTimer<system>(#hours(24), topCanisterRequest);
+            await topCanisterRequest();
+        }
+    );
+
+    // ===== SYSTEM =====
 
     type InspectParams = {
         arg: Blob;
@@ -55,9 +70,7 @@ shared ({ caller = owner }) persistent actor class IndexesRegistry() = this {
         };
     };
 
-    /////////
-    // API //
-    /////////
+    // ===== HANDLERS =====
 
     public query func handlerGetIndexes() : async [(CanistersKinds.IndexesKind, [Principal])] {
         let newMap = memoryIndexes.map(func(k,v) = v.toArray());
