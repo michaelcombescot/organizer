@@ -1,0 +1,38 @@
+.home {
+    #home-new-todo {
+        position: fixed; bottom: 1rem; right: 1rem;
+    }
+}
+
+#todoform {
+    width: 80vw;
+}
+
+#home-todo-lists-wrapper {
+    display: flex; justify-content: center; gap: 2rem;
+
+    .home-todo-lists {
+        display: flex; flex-direction: column; gap: 1rem;
+
+        .todo-card {
+            display: flex; flex-direction: column; gap: 0.5rem;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            min-width: 30rem; max-width: 40vw;
+
+            .todo-card-header {
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .todo-card-body {
+                display: flex; justify-content: center;
+            }
+
+            .todo-card-footer {
+                display: flex; justify-content: space-between; gap: 0.5rem;
+                color: inherit;
+            }
+        }
+    }
+}
