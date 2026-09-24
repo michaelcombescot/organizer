@@ -21,6 +21,17 @@
     "vue-router": "^5.3.0"
   },
   "devDependencies": {
+    "dependencies": {
+    "@dfinity/agent": "^3.0.0",
+    "@dfinity/auth-client": "^3.0.0",
+    "@dfinity/candid": "^3.0.0",
+    "@dfinity/identity": "^3.0.0",
+    "@dfinity/principal": "^3.0.0",
+    "borc": "^3.0.0",
+    "cbor": "^10.0.9",
+    "dayjs": "^1.11.13",
+    "simple": "^0.2.0",
+    "simple-cbor": "^0.4.1",
     "@eslint/js": "~9.33.0",
     "@icp-sdk/bindgen": "^0.4.0",
     "@types/node": "^25.9.1",

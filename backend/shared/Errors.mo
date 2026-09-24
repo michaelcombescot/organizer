@@ -1,8 +1,13 @@
 module {
-    public type Err = {
+    public type HandlerErr = {
         #errInterCanisterCall: Text;
-        #errForbidden: Text;
-        #errNotFound: Text;
-        #errValidation: Text;
+        #errMustNotBeAnonymous;
+        #errMustBeController;
+        #errForbidden;
+        #errNotFound;
+        #errValidation: [{
+            field: Text;
+            message: Text;
+        }];
     };
 }

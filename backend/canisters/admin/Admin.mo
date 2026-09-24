@@ -12,7 +12,6 @@ import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import Canisters "../../shared/Canisters";
 import Index "../index/Index";
-import BucketGroups "../buckets/bucketGroups";
 import BucketUsers "../buckets/bucketUsers";
 import Array "mo:core/Array";
 
@@ -25,7 +24,7 @@ import Array "mo:core/Array";
 // - give resgistry to indexes
 // - give indexes to buckets
 // - manage canisters upgrades
-shared ({ caller = owner }) persistent actor class Coordinator() = this {
+shared ({ caller = owner }) persistent actor class Admin() = this {
     let thisPrincipal = Principal.fromActor(this);
 
     // ===== MEMORY =====

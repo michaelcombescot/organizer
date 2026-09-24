@@ -1,92 +1,73 @@
-// import Map "mo:core/Map";
-// import Principal "mo:core/Principal";
-// import Result "mo:core/Result";
-// import Array "mo:core/Array";
-// import Time "mo:core/Time";
-// import Timer "mo:core/Timer";
-// import UserData "../models/todosUserData";
-// import Identifiers "../shared/identifiers";
-// import MixinAllowedCanisters "mixins/mixinAllowedCanisters";
-// import MixinOpsOperations "mixins/mixinOpsOperations";
+import Map "mo:core/Map";
+import Principal "mo:core/Principal";
+import Result "mo:core/Result";
+import Blob "mo:core/Blob";
+import Time "mo:core/Time";
+import User "../../models/User";
+import MixinJobTopUpCycles "../mixins/MixinJobTopUpCycles";
+import Errors "../../shared/Errors";
+import Identifiers "../../shared/identifiers";
 
 shared ({ caller = owner }) persistent actor class BucketUsers() = this {
-//     include MixinOpsOperations({
-//         coordinatorPrincipal    = owner;
-//         canisterPrincipal       = Principal.fromActor(this);
-//         toppingThreshold        = 2_000_000_000_000;
-//         toppingAmount           = 2_000_000_000_000;
-//         toppingIntervalNs       = 20_000_000_000;
-//     });
-//     include MixinAllowedCanisters(coordinatorActor);
+    let thisPrincipal = Principal.fromActor(this);
 
-//     // ===== ERRORS =====
+    include MixinJobTopUpCycles<system>({
+        adminPrincipal    = owner;
+        canisterPrincipal = thisPrincipal;
+        kind              = #bucket(#bucketUsers);
+    });
 
-//     let ERR_USER_NOT_FOUND = "ERR_USER_NOT_FOUND";
-//     let ERR_USER_ALREADY_EXISTS = "ERR_USER_ALREADY_EXISTS";
+    // ===== MEMORY =====
 
-//     // ===== MEMORY =====
+    let memUsers = Map.empty<Principal, User.User>();
 
-//     let memoryUsers = Map.empty<Principal, UserData.UserData>();
+    // ===== SYSTEM =====
 
-//     // ===== JOBS =====
+    type InspectParams = {
+        arg: Blob;
+        caller : Principal;
+        msg : {
+        #systemAddIndex : () -> (userPrincipal : [Principal]);
+        #handlerCreateUser : () -> (userPrincipal : Principal, name : Text, email : Text);
+        #handlerGetUserData : () -> (userPrincipal : Principal)
+      }
+    };
 
-//     ignore Timer.setTimer<system>(
-//         #seconds(0),
-//         func () : async () {
-//             ignore Timer.recurringTimer<system>(#hours(24), topCanisterRequest);
-//             await topCanisterRequest();
-//         }
-//     );
+    system func inspect(params: InspectParams) : Bool {
+        if ( params.caller == Principal.anonymous() ) { return false; };
 
-//     // ===== SYSTEM =====
+        if ( Blob.size(params.arg) > 5000 ) { return false; };
 
-//     type InspectParams = {
-//         arg: Blob;
-//         caller : Principal;
-//         msg : {
-//             #handlerGetUserData : () -> (userPrincipal: Principal);
-//             #handlerCreateUser : () -> { userPrincipal: Principal; };
-//         }
-//     };
+        switch ( params.msg ) {
+            case (#systemAddIndex(_)) params.caller.isController();
+            case (#handlerGetUserData(_)) true;
+            case (#handlerCreateUser(_)) true;
+        }
+    };
 
-//     system func inspect(params: InspectParams) : Bool {
-//         if ( params.caller == Principal.anonymous() ) { return false; };
+    // ===== HANDLERS =====
 
-//         switch ( params.msg ) {
-//             case (#handlerGetUserData(_))       true;
-//             case (#handlerCreateUser(_))        true;
-//         }
-//     };
+    public query func handlerGetUserData( userPrincipal: Principal ) : async Result.Result<User.PublicUser, Errors.HandlerErr> {
+        let ?user = memUsers.get(userPrincipal) else return #err(#errNotFound);
 
-//     // ===== HANDLERS =====
+        #ok(user.toPublic());
+    };
 
-//     public shared func handlerGetUserData( userPrincipal: Principal ) : async Result.Result<UserData.SharableUserData, Text> {
-//         let ?userData = memoryUsers.get(userPrincipal) else return #err(ERR_USER_NOT_FOUND);
+    public shared func handlerCreateUser(userPrincipal: Principal, name: Text, email: Text) : async Result.Result<(), Errors.HandlerErr> {
+        if ( memUsers.containsKey(userPrincipal) ) return #err(#errValidation([{ field = "userPrincipal"; message = "User already exists" }]));
 
-//         #ok({
-//             name = userData.name;
-//             email = userData.email;
-//             groups = Array.fromIter( Map.keys(userData.groups) );
-//             createdAt = userData.createdAt;
-//         })
-//     };
+        let user: User.User = {
+            data = {
+                name = name;
+                email = email;
+            };
+            groups = Map.empty<Identifiers.Identifier, ()>();
+            createdAt = Time.now();
+            updatedAt = Time.now();
+        };
 
-//     public shared func handlerCreateUser({ userPrincipal: Principal; }) : async Result.Result<(), Text> {
-//         switch ( memoryUsers.get(userPrincipal) ) {
-//             case (?_) return #err(ERR_USER_ALREADY_EXISTS);
-//             case null ();
-//         };
+        memUsers.add(userPrincipal, user);
 
-//         // create user data
-//         let userData: UserData.UserData = {
-//             name = "";
-//             email = "";
-//             groups = Map.empty<Identifiers.Identifier, ()>();
-//             createdAt = Time.now();
-//         };
-
-//         memoryUsers.add(userPrincipal, userData);
-
-//         #ok();
-//     };
+        #ok();
+    };
 };
