@@ -1,34 +1,39 @@
-import Result "mo:core/Result";
 import Order "mo:core/Order";
 import Text "mo:core/Text";
 
-module {
-    // Canisters Kinds
+module Kind {
+  // ===== Canisters Kinds =====
 
-    public type CanisterKind = {
-      #index;
-      #registry: RegistryKind;
-      #bucket: BucketKind;
-    };
+  public type CanisterKind = {
+    #registryIndexes;
+    #index;
+    #worker: WorkerKind;
+    #search: SearchKind;
+    #bucket: BucketKind;
+  };
 
-    public type RegistryKind = {
-      #registryIndexes;
-    };
+  public type WorkerKind = {
+    #workerApp;
+    #workerTopUp;
+  };
 
-    public type BucketKind = {
-      #bucketUsers;
-    };
+  public type SearchKind = {
+    #searchUsers;
+  };
 
-    public func compareCanisterKind(a: CanisterKind, b: CanisterKind) : Order.Order {
-      Text.compare(debug_show(a), debug_show(b));
-    };
+  public type BucketKind = {
+    #bucketUsers;
+  };
 
-    // Actor Interfaces
+  public func compareCanisterKind(a: CanisterKind, b: CanisterKind) : Order.Order {
+    Text.compare(debug_show(a), debug_show(b));
+  };
+};
 
-    public type ICoordinator = actor {
-      handlerTopCanister: shared (canisterPrincipal: Principal, kind: CanisterKind) -> async Result.Result<(), Text>;
-      handlerCreateBucket: shared (bucketKind: CanisterKind) -> async Result.Result<Principal, Text>;
-      handlerGetRegistries: shared () -> async Result.Result<[Principal], Text>;
-      handlerGetIndexes: shared () -> async Result.Result<[Principal], Text>;
-    };
-}
+module Interfaces {
+
+};
+
+module Utils {
+  
+};

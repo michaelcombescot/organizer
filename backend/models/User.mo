@@ -2,7 +2,7 @@ import Map "mo:core/Map";
 import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Text "mo:base/Text";
-import Identifiers "../shared/identifiers";
+import Identifiers "../shared/Identifiers";
 
 module {
   public type User = {

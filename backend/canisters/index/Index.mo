@@ -1,28 +1,19 @@
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Blob "mo:core/Blob";
-import Error "mo:core/Error";
-import MixinJobTopUpCycles "../mixins/MixinJobTopUpCycles";
+import MixinHandlersKnownCanisters "../../shared/mixins/MixinKnownCanisters";
 import UserMapping "../../shared/UserMapping";
 import Errors "../../shared/Errors";
-import BucketUsers "../buckets/bucketUsers";
+import Canisters "../../shared/Canisters";
 
-shared ({ caller = owner }) persistent actor class Index() = this {
-    let thisPrincipal = Principal.fromActor(this);
-
-    include MixinJobTopUpCycles<system>({
-        adminPrincipal    = owner;
-        canisterPrincipal = thisPrincipal;
-        kind              = #index;
+shared ({ caller = owner }) persistent actor class Index(knownCanisters: [(Principal, Canisters.CanisterKind)]) = this {
+    include MixinHandlersKnownCanisters({
+      alreadyKnown = knownCanisters
     });
 
     // ===== MEMORY =====
 
     var memoryUsersMapping: UserMapping.UserRing = [];
-
-    // ===== JOBS =====
-
-    
 
     // ===== SYSTEM =====
 
@@ -30,8 +21,10 @@ shared ({ caller = owner }) persistent actor class Index() = this {
         arg: Blob;
         caller : Principal;
         msg : {
-            #systemUpdateUserMapping : () -> (mapping : UserMapping.UserRing);
-            #handlerFetchOrCreateUser : () -> ();
+          #systemUpdateUserMapping : () -> (mapping : UserMapping.UserRing);
+          #handlerAddKnownCanisters : () -> (canisters : [(Principal, Canisters.CanisterKind)]);
+          #handlerRemoveKnownCanisters : () -> (canisters : [(Principal, Canisters.CanisterKind)]);
+          #handlerGetCurrentUserBucket : () -> ();
         };
     };
 
@@ -42,29 +35,22 @@ shared ({ caller = owner }) persistent actor class Index() = this {
 
         switch ( params.msg ) {
             case (#systemUpdateUserMapping(_)) params.caller.isController();
-            case (#handlerFetchOrCreateUser(_)) true;
+            case (#handlerAddKnownCanisters(_)) params.caller.isController();
+            case (#handlerRemoveKnownCanisters(_)) params.caller.isController();
+            case (#handlerGetCurrentUserBucket(_)) true;
         }
     };
 
     public shared ({ caller }) func systemUpdateUserMapping(mapping: UserMapping.UserRing) : async Result.Result<(), Errors.HandlerErr> {
-        if ( not Principal.isController(caller) ) { return #err(#errMustBeController); };
-    
-        memoryUsersMapping := mapping;
-        #ok(());
+      if ( not Principal.isController(caller) ) { return #err(#errMustBeController); };
+  
+      memoryUsersMapping := mapping;
+      #ok(());
     };
 
     // ===== HANDLERS USERS =====
 
-    public shared ({ caller }) func handlerCreateUser(name: Text, email: Text) : async Result.Result<Principal, Errors.HandlerErr> {
-        let bucketPrincipal = UserMapping.helperFindUserBucket(memoryUsersMapping, caller);
-
-        try {
-            switch ( await (actor(Principal.toText(bucketPrincipal)): BucketUsers.BucketUsers).handlerCreateUser(caller, name, email) ) {
-                case (#ok(_)) #ok(bucketPrincipal);
-                case (#err(e)) #err(e);
-            }
-        } catch (e) {
-            #err(#errInterCanisterCall(e.message()))
-        }
+    public query ({ caller }) func handlerGetCurrentUserBucket() : async Result.Result<Principal, Errors.HandlerErr> {
+      #ok(UserMapping.helperFindUserBucket(memoryUsersMapping, caller))
     };
 };
