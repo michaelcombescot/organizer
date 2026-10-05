@@ -12,36 +12,53 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
 
   var nextJobId = 0;
   let memJobs = Map.empty<Nat, Job>();
-  let jobRunning = Map.empty<Nat, ()>();
+  let memJobRunning = Map.empty<Nat, ()>();
+  let batchSize = 400;
 
   // ===== WORKERS =====
 
   ignore Timer.recurringTimer<system>(
-    #seconds(recurringDelay), func () : async () {
-      var futures = List.empty<(Nat, async Result<(), Text>)>();
+  #seconds(recurringDelay), func () : async () {
+    var batch = List.empty<(Nat, async Result<(), Text>)>();
+    var count = 0;
 
-      for ((jobId, job) in memJobs.entries()) {
-        if ( jobRunning.containsKey(jobId) ) { continue };
+    for ((jobId, job) in memJobs.entries()) {
+      if ( memJobRunning.containsKey(jobId) ) { continue };
 
-        jobRunning.add(jobId, ());
+      List.add(batch, (jobId, executeJob(job)));
+      count += 1;
 
-        List.add(futures, (jobId, executeJob(job)));
-      };
-
-      for ((jobId, f) in List.values(futures)) {
-        try {
-          switch ( await f ) {
-            case (#ok(())) memJobs.remove(jobId);
-            case (#err(e)) Debug.print("Job execution failed: " # e);
+      if ( count >= batchSize ) {
+        // await this batch before dispatching more
+        for ((jobId, f) in List.values(batch)) {
+          try {
+            switch ( await f ) {
+              case (#ok(())) memJobs.remove(jobId);
+              case (#err(e)) Debug.print("Job execution failed: " # e);
+            };
+          } catch (e) {
+            Debug.print("Job execution threw: " # Error.message(e));
           };
-        } catch (e) {
-          Debug.print("Unexpected error during job execution: " # e.message());
         };
 
-        jobRunning.remove(jobId);
+        batch := List.empty<(Nat, async Result<(), Text>)>();
+        count := 0;
       };
-    }
-  );
+    };
+
+    // handle any remaining jobs smaller than a full batch
+    for ((jobId, f) in List.values(batch)) {
+      try {
+        switch ( await f ) {
+          case (#ok(())) memJobs.remove(jobId);
+          case (#err(e)) Debug.print("Job execution failed: " # e);
+        };
+      } catch (e) {
+        Debug.print("Job execution threw: " # Error.message(e));
+      };
+    };
+  }
+);
 
   // ===== HELPERS =====
 
@@ -56,7 +73,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
     let jobId = create_job(job);
     
     let execution : async () = async {
-      jobRunning.add(jobId, ());
+      memJobRunning.add(jobId, ());
       
       let jobToExecute =switch ( memJobs.get(jobId) ) {
         case (?jobToExecute) jobToExecute;
@@ -72,7 +89,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
         Debug.print("Unexpected error during job execution: " # e.message());
       };
 
-      jobRunning.remove(jobId);
+      memJobRunning.remove(jobId);
     };
 
     ignore execution;
