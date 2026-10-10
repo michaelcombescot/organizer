@@ -1,56 +1,33 @@
 import Principal "mo:core/Principal";
-import Result "mo:core/Result";
 import Blob "mo:core/Blob";
-import MixinHandlersKnownCanisters "../../shared/mixins/MixinKnownCanisters";
-import UserMapping "../../shared/UserMapping";
-import Errors "../../shared/Errors";
-import Canisters "../../shared/Canisters";
+import MixinCanistersByKind "../../shared/mixins/MixinCanistersByKind";
+import MixinUsersMapping "../../shared/mixins/MixinUsersMapping";
+import MixinUsers "MixinUsers";
+import { Kind = {type CanisterKind} } "../../shared/Canisters";
 
-shared ({ caller = owner }) persistent actor class Index(knownCanisters: [(Principal, Canisters.CanisterKind)]) = this {
-    include MixinHandlersKnownCanisters({
-      alreadyKnown = knownCanisters
-    });
+shared ({ caller = owner }) persistent actor class Index(canisters: [(CanisterKind, Principal)], userRing: [Principal]) = this {
+  include MixinCanistersByKind(canisters);
+  include MixinUsersMapping(userRing);
+  include MixinUsers({ userRing = userRing; findUserBucket = helperFindUserBucket });
 
-    // ===== MEMORY =====
+  // ===== SYSTEM =====
 
-    var memoryUsersMapping: UserMapping.UserRing = [];
+  type InspectParams = {
+      arg: Blob;
+      caller : Principal;
+      msg : InspectParamsMsgUsers or InspectParamsMsgUserMapping or InspectParamsMsgKnownCanistersByKind;
+  };
 
-    // ===== SYSTEM =====
+  system func inspect(params: InspectParams) : Bool {
+      if ( params.caller.isAnonymous() ) { return false; };
 
-    type InspectParams = {
-        arg: Blob;
-        caller : Principal;
-        msg : {
-          #systemUpdateUserMapping : () -> (mapping : UserMapping.UserRing);
-          #handlerAddKnownCanisters : () -> (canisters : [(Principal, Canisters.CanisterKind)]);
-          #handlerRemoveKnownCanisters : () -> (canisters : [(Principal, Canisters.CanisterKind)]);
-          #handlerGetCurrentUserBucket : () -> ();
-        };
-    };
+      if ( Blob.size(params.arg) > 5000 ) { return false; };
 
-    system func inspect(params: InspectParams) : Bool {
-        if ( params.caller == Principal.anonymous() ) { return false; };
-
-        if ( Blob.size(params.arg) > 5000 ) { return false; };
-
-        switch ( params.msg ) {
-            case (#systemUpdateUserMapping(_)) params.caller.isController();
-            case (#handlerAddKnownCanisters(_)) params.caller.isController();
-            case (#handlerRemoveKnownCanisters(_)) params.caller.isController();
-            case (#handlerGetCurrentUserBucket(_)) true;
-        }
-    };
-
-    public shared ({ caller }) func systemUpdateUserMapping(mapping: UserMapping.UserRing) : async Result.Result<(), Errors.HandlerErr> {
-      if ( not Principal.isController(caller) ) { return #err(#errMustBeController); };
-  
-      memoryUsersMapping := mapping;
-      #ok(());
-    };
-
-    // ===== HANDLERS USERS =====
-
-    public query ({ caller }) func handlerGetCurrentUserBucket() : async Result.Result<Principal, Errors.HandlerErr> {
-      #ok(UserMapping.helperFindUserBucket(memoryUsersMapping, caller))
-    };
+      switch ( params.msg ) {
+          case (#handlerUpdateUserMapping(_)) params.caller.isController();
+          case (#handlerAddKnownCanistersByKind(_)) params.caller.isController();
+          case (#handlerRemoveKnownCanistersByKind(_)) params.caller.isController();
+          case (#handlerGetCurrentUserBucket(_)) true;
+      }
+  };
 };

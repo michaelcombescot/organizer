@@ -1,7 +1,7 @@
 import Map "mo:core/Map";
 import Time "mo:core/Time";
 import Iter "mo:core/Iter";
-import Text "mo:base/Text";
+import Text "mo:core/Text";
 import Identifiers "../shared/Identifiers";
 
 module {

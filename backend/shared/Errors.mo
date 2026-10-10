@@ -5,6 +5,7 @@ module {
         #errMustBeController;
         #errForbidden;
         #errNotFound;
+        #errBadRequest: Text;
         #errMissingCanister;
         #errValidation: [{
             field: Text;

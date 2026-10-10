@@ -1,24 +1,22 @@
 import { Kind = {type CanisterKind} } "../shared/Canisters";
 
-module Job {
+module {
   public type Job = {
-    #jobAdmin: JobAdmin.JobAdmin;
-    #jobWorkerApp: JobWorkerApp.JobWorkerAppJob;
-  };  
-};
+    #jobAdmin: JobAdmin;
+    #jobWorkerApp: JobWorkerAppJob;
+    #jobBucketUsers: JobBucketUsersJob;
+  };
 
-module JobAdmin {
   public type JobAdmin = {
-    #broadcastCanisters: BroadcastCanisters;
+    #broadcastIndex: { targets: [Principal]; indexes: [Principal] };
+    #broadcastBucket: { targets: [Principal]; canisters: [(CanisterKind, Principal)] };
+    #broadcastSearch: { targets: [Principal]; canisters: [(CanisterKind, Principal)] };
   };
 
-  type BroadcastCanisters = {
-    targets: [Principal];
-    canisters: [(Principal, CanisterKind)];
-  };
-};
-
-module JobWorkerApp {
   public type JobWorkerAppJob = {
+  };
+
+  public type JobBucketUsersJob = {
+    #sendFieldsUpdate: { name: Text; email: Text}
   };
 };

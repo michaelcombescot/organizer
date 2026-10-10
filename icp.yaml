@@ -1,12 +1,7 @@
 canisters:
-  - name: bucket_group
-    build:
-      steps:
-        - type: script
-          commands:
-            - cargo build --package bucket_groups --release --target wasm32-unknown-unknown
-            - candid-extractor target/wasm32-unknown-unknown/release/bucket_groups.wasm > ./backend/buckets/bucket_groups/backend.did
-            - ic-wasm target/wasm32-unknown-unknown/release/bucket_groups.wasm -o "$ICP_WASM_OUTPUT_PATH" metadata candid:service -f ./backend/buckets/bucket_groups/backend.did -v public --keep-name-section
+  - name: SearchUsers
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
 
   - name: frontend
     recipe:

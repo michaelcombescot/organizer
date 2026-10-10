@@ -1,13 +1,13 @@
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Timer "mo:core/Timer";
+import Time "mo:core/Time";
 import { type Result } "mo:core/Result";
 import Debug "mo:core/Debug";
 import Error "mo:core/Error";
-import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Iter "mo:core/Iter";
-import { Job = {type Job} } "../../models/Job";
+import { type Job } "../../models/Job";
 import Configs "../../Configs";
 import { type HandlerErr } "../Errors";
 
@@ -21,7 +21,8 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
     retryAt: Time.Time;
   };
 
-  type InspectParamsMsg = {
+  type InspectParamsMsgJobs = {
+    #handlerCreateJob : (job: Job) -> ();
     #handlerRequeueFailedJobImmediatly : () -> (jobId : Nat);
     #handlerRequeueAllFailedJobs : () -> ();
     #handlerGetFailedJobs : () -> ();
@@ -46,7 +47,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
       retryAt = Time.now();
     };
     
-    memJobs.add(jobId, jobWrapper);
+    memJobs.add(jobWrapper.jobId, jobWrapper);
     nextJobId += 1;
     jobWrapper
   };
@@ -107,9 +108,15 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
     }
   );
 
-  // ===== FAILED JOB MANAGEMENT =====
+  // ===== HANDLERS =====
 
-  // Allows you (or an admin) to manually put a permanently failed job back into the queue
+  public shared ({ caller }) func handlerCreateJob(job: Job) : async Result<(), HandlerErr> {
+    if (not Principal.isController(caller)) return #err(#errMustBeController);
+
+    ignore createAndProcessJob(job);
+    #ok(())
+  };
+
   public shared ({ caller }) func handlerRequeueFailedJobImmediatly(jobId: Nat) : async Result<(), HandlerErr> {
     if (not Principal.isController(caller)) return #err(#errMustBeController);
 

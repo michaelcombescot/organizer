@@ -3,15 +3,12 @@ import Blob "mo:core/Blob";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import Result "mo:core/Result";
-import Canisters "../../shared/Canisters";
+import { type HandlerErr } "../../shared/Errors";
+import { Kind = {type CanisterKind} } "../../shared/Canisters";
+import MixinCanistersByPrincipal "../../shared/mixins/MixinCanistersByPrincipal";
 
-import Errors "../../shared/Errors";
-import MixinHandlersKnownCanisters "../../shared/mixins/MixinKnownCanisters";
-
-shared ({ caller = owner }) persistent actor class RegistryIndexes(adminPrincipal: Principal) = this {
-    include MixinHandlersKnownCanisters({
-      alreadyKnown = [(adminPrincipal, #admin)]
-    });
+shared ({ caller = owner }) persistent actor class RegistryIndexes(canisters: [Principal]) = this {
+    include MixinCanistersByPrincipal(canisters);
 
     // ===== MEMORY =====
 
@@ -23,28 +20,26 @@ shared ({ caller = owner }) persistent actor class RegistryIndexes(adminPrincipa
         arg: Blob;
         caller : Principal;
         msg : {
-          #getIndexes : () -> ();
-          #handlerAddKnownCanisters : () -> (canisters : [(Principal, Canisters.CanisterKind)]);
-          #handlerRemoveKnownCanisters : () -> (canisters : [(Principal, Canisters.CanisterKind)])
-        };
+          #handlerGetIndexes : () -> ();
+        } or InspectParamsMsgKnownCanistersByPrincipal
     };
 
     system func inspect(params: InspectParams) : Bool {
-        if ( Principal.isAnonymous(params.caller) ) return false;
+        if ( params.caller.isAnonymous() ) return false;
 
         if ( Blob.size(params.arg) > 5000 ) return false;
 
         switch (params.msg) {
-            case (#getIndexes(_)) true;
-            case (#handlerAddKnownCanisters(_)) params.caller.isController();
-            case (#handlerRemoveKnownCanisters(_)) params.caller.isController();
+            case (#handlerGetIndexes(_)) true;
+            case (#handlerAddKnownCanistersByPrincipal(_)) params.caller.isController();
+            case (#handlerRemoveKnownCanistersByPrincipal(_)) params.caller.isController();
         }
     };
 
     // ===== HANDLERS =====
 
-    public query ({ caller }) func getIndexes() : async Result.Result<[Principal], Errors.HandlerErr> {
-        if ( Principal.isAnonymous(caller) ) return #err(#errMustNotBeAnonymous);
+    public query ({ caller }) func handlerGetIndexes() : async Result.Result<[Principal], HandlerErr> {
+        if ( caller.isAnonymous() ) return #err(#errForbidden);
 
         #ok(memIndexes.keys().toArray())
     };
