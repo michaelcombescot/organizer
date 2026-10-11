@@ -29,7 +29,7 @@ module {
     {
       name = self.data.name;
       email = self.data.email;
-      groups = Map.keys(self.groups).toArray();
+      groups = self.groups.keys().toArray();
       createdAt = self.createdAt;
       updatedAt = self.updatedAt;
     };

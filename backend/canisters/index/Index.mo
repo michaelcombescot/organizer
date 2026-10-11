@@ -1,14 +1,14 @@
 import Principal "mo:core/Principal";
 import Blob "mo:core/Blob";
 import MixinCanistersByKind "../../shared/mixins/MixinCanistersByKind";
-import MixinUsersMapping "../../shared/mixins/MixinUsersMapping";
+import MixinCanistersSlots "../../shared/mixins/MixinCanistersSlots";
 import MixinUsers "MixinUsers";
 import { Kind = {type CanisterKind} } "../../shared/Canisters";
 
 shared ({ caller = owner }) persistent actor class Index(canisters: [(CanisterKind, Principal)], userRing: [Principal]) = this {
   include MixinCanistersByKind(canisters);
-  include MixinUsersMapping(userRing);
-  include MixinUsers({ userRing = userRing; findUserBucket = helperFindUserBucket });
+  include MixinCanistersSlots(canisters);
+  include MixinUsers({ userRing = userRing; findUserBucket = helperFindByPrincipal });
 
   // ===== SYSTEM =====
 
