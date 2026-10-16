@@ -4,7 +4,7 @@ import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import { type Result } "mo:core/Result";
 import Iter "mo:core/Iter";
-import { type HandlerErr } "../Errors";
+import Errors "../Errors";
 
 mixin({knownCanisters: Map.Map<Principal, ()>; limit: Nat}) {
   // ===== TYPES =====
@@ -40,7 +40,7 @@ mixin({knownCanisters: Map.Map<Principal, ()>; limit: Nat}) {
     #alreadyReserved;
   };
 
-  public shared ({ caller }) func handlerReserveEntry(text: Text, principal: Principal) : async Result<ReserveEntryResult, HandlerErr> {
+  public shared ({ caller }) func handlerReserveEntry(text: Text, principal: Principal) : async Result<ReserveEntryResult, Errors.HandlerErr> {
     let ?_ = knownCanisters.get(caller) else return #err(#errForbidden);
 
     let ?entry = memSearch.get(text.toLower()) else {
@@ -67,7 +67,7 @@ mixin({knownCanisters: Map.Map<Principal, ()>; limit: Nat}) {
 
   // CONFIRMATION
 
-  public shared ({ caller }) func handlerConfirmEntry(text: Text, principal: Principal) : async Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerConfirmEntry(text: Text, principal: Principal) : async Result<(), Errors.HandlerErr> {
     let ?_ = knownCanisters.get(caller) else return #err(#errForbidden);
 
     let ?entry = memSearch.get(text.toLower()) else {
@@ -80,7 +80,7 @@ mixin({knownCanisters: Map.Map<Principal, ()>; limit: Nat}) {
 
     if (not entry.confirmed and entry.reservedAt + 60_000_000_000 < Time.now()) {
       memSearch.remove(text.toLower());
-      return #err(#errBadRequest("Reservation expired"));
+      return #err(#errBadRequest(Errors.RESERVATION_EXPIRED));
     };
 
     switch (memSearchByOwner.get(principal)) {
@@ -99,7 +99,7 @@ mixin({knownCanisters: Map.Map<Principal, ()>; limit: Nat}) {
   };
 
   // DELETE
-  public shared ({ caller }) func handlerDeleteOwner(principal: Principal) : async Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerDeleteOwner(principal: Principal) : async Result<(), Errors.HandlerErr> {
     let ?_ = knownCanisters.get(caller) else return #err(#errForbidden);
 
     let ?name = memSearchByOwner.get(principal) else {

@@ -1,8 +1,6 @@
 import Debug "mo:core/Debug";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
-import MixinCanistersByKind "../../shared/mixins/MixinCanistersByKind";
-import MixinUsersMapping "../../shared/mixins/MixinUsersMapping";
 import MixinTopUpCycles "MixinTopUpCycles";
 import MixinJobs "../../shared/mixins/MixinJobs";
 import Map "mo:core/Map";
@@ -17,9 +15,11 @@ import Queue "mo:core/Queue";
 import Timer "mo:core/Timer";
 import Errors "../../shared/Errors";
 import Configs "../../Configs";
-import SearchUsers "../search/SearchUsers";
+import SearchUsersByEmail "../search/SearchUsersByEmail";
+import SearchUsersByName "../search/SearchUsersByName";
 import Index "../index/Index";
 import BucketUsers "../buckets/bucketUsers/BucketUsers";
+import IC "mo:ic/Types";
 
 shared ({ caller = owner }) persistent actor class Admin() = this {
   let thisPrincipal = Principal.fromActor(this);
@@ -27,7 +27,7 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
   // ===== MEMORY =====
 
   include MixinCanistersByKind([]);
-  include MixinUsersMapping([]);
+  include MixinCanistersSlots([]);
   include MixinTopUpCycles<system>(memKnownCanistersByKind);
   include MixinJobs<system>(memKnownCanistersByKind);
 
@@ -48,42 +48,17 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
 
   // ===== HANDLERS =====
 
-  public shared ({ caller }) func handlerUpgradeCanisterKind(nature : CanisterKind, wasmModule: Blob.Blob) : async Result.Result<(), Errors.HandlerErr> {
-    if ( not caller.isController() ) return #err(#errMustBeController);
+  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<{version: Nat; mapping: [(CanisterKind, [Principal])]}, Errors.HandlerErr> {
+    if ( not isKnown(caller) ) return #err(#errForbidden);
 
-    // let ?canistersMap = memCanisters.get(CanistersKinds.compareCanistersKinds, #static(nature)) else Runtime.trap("No canisters of type " # debug_show(nature) # " found");
 
-    // for ( canisterPrincipal in Map.keys(canistersMap) ) {
-    //     try {
-    //         await IC.ic.install_code({
-    //             mode = #upgrade(?{ 
-    //                 wasm_memory_persistence = ?#keep; 
-    //                 skip_pre_upgrade = null; 
-    //             });
-    //             canister_id = canisterPrincipal;
-    //             wasm_module = wasmModule;
-    //             arg = to_candid((thisPrincipal));
-    //             sender_canister_version = null;
-    //     });                 
-    //         Debug.print("[coordinator] Upgraded canister " # Principal.toText(canisterPrincipal));
-    //     } catch (e) {
-    //         Debug.print("[coordinator] Cannot upgrade bucket, error: " # Error.message(e));
-    //     };
-    // };
-
-    #ok
+    #ok({version = memMappingVersion; mapping = knownCanistersTuples()})
   };
 
   public shared ({ caller }) func handlerCreateCanister(kind: CanisterKind) : async Result.Result<Principal, Errors.HandlerErr> {
-    if ( not (caller.isController() or isIndex(caller)) ) return #err(#errForbidden);
+    if ( not isKnown(caller) ) return #err(#errForbidden);
 
-    await createCanister(kind)
-  };
-
-  // ===== HELPERS =====
-
-  func createCanister(kind: CanisterKind) : async Result.Result<Principal, Errors.HandlerErr> {
-    // 1. CREATE THE CANISTER
+     // 1. CREATE THE CANISTER
 
     let newPrincipal = try {
       switch (kind) {
@@ -96,7 +71,8 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
         };
         case (#search(k)) {
           switch (k) {
-            case (#searchUsers) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) SearchUsers.SearchUsers(knownIndexes()));
+            case (#searchUsersByEmail) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) SearchUsersByEmail.SearchUsersByEmail(knownIndexes()));
+            case (#searchUsersByName) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) SearchUsersByName.SearchUsersByName(knownIndexes()));
           };
         };
       };
@@ -136,4 +112,20 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
 
     #ok(newPrincipal)
   };
+
+  public shared ({ caller }) func handlerUpgradeCanisterKind(canisterId: Principal, wasmModule: Blob.Blob) : async Result.Result<(), Errors.HandlerErr> {
+    if ( not isKnown(caller) ) return #err(#errMustBeController);
+
+    let resp = await IC.install_code({
+      mode = #upgrade;
+      canister_id = canisterId;
+      wasm_module = wasmModule;
+      arg = to_candid ();
+    });
+
+    switch (resp) {
+      case (#ok) ();
+      case (#err(e)) return #err(#errInterCanisterCall("Cannot upgrade canister with canisterId " # Principal.toText(canisterId) # ", error: " # Error.message(e)));
+    }
+  };   
 };

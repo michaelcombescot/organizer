@@ -1,5 +1,13 @@
 canisters:
-  - name: SearchUsers
+  - name: index
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+
+  - name: SearchUsersByName
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+
+  - name: SearchUsersByEmail
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 

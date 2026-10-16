@@ -21,7 +21,8 @@ mixin <system>(knownCanisters: Map.Map<CanisterKind, Map.Map<Principal, ()>>) {
       };
       case(#search(searchkind)) {
         switch (searchkind) {
-          case(#searchUsers) Configs.TOPPING_THRESHOLD_SEARCH;
+          case(#searchUsersByName) Configs.TOPPING_THRESHOLD_SEARCH;
+          case(#searchUsersByEmail) Configs.TOPPING_THRESHOLD_SEARCH;
         };
       };
     }
@@ -38,7 +39,8 @@ mixin <system>(knownCanisters: Map.Map<CanisterKind, Map.Map<Principal, ()>>) {
       };
       case(#search(searchkind)) {
         switch (searchkind) {
-          case(#searchUsers) Configs.TOPPING_AMOUNT_SEARCH;
+          case(#searchUsersByName) Configs.TOPPING_AMOUNT_SEARCH;
+          case(#searchUsersByEmail) Configs.TOPPING_AMOUNT_SEARCH;
         };
       };
     }

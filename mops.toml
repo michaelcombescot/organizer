@@ -5,5 +5,11 @@ ic = "4.2.0"
 [toolchain]
 moc = "2.0.0"
 
-[canisters.SearchUsers]
-main = "backend/canisters/search/SearchUsers.mo"
+[canisters.index]
+main = "backend/canisters/index/Index.mo"
+
+[canisters.SearchUsersByName]
+main = "backend/canisters/search/SearchUsersByName.mo"
+
+[canisters.SearchUsersByEmail]
+main = "backend/canisters/search/SearchUsersByEmail.mo"

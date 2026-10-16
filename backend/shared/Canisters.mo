@@ -1,5 +1,7 @@
 import Text "mo:core/Text";
 import Order "mo:core/Order";
+import Result "mo:core/Result";
+import Errors "Errors";
 
 module {
   public module Kind {
@@ -32,7 +34,9 @@ module {
     };
   };
 
-  public module Utils {
-    
+  public module Interfaces {
+    public type AdminActor = actor {
+      handlerGetFullMapping : shared query () -> async Result.Result<{version: Nat; mapping: [(Kind.CanisterKind, [Principal])]}, Errors.HandlerErr>;
+    };
   };
 }
