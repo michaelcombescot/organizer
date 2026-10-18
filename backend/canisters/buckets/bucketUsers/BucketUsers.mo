@@ -11,10 +11,11 @@ import { Kind = { type CanisterKind} } "../../../shared/Canisters";
 import MixinCanistersMapping "../../../shared/mixins/MixinCanistersMapping";
 import { type Job } "../../../models/Job";
 
-shared ({ caller }) actor class BucketUsers(mapping: [(CanisterKind, [Principal])]) = this {
+shared ({ caller }) actor class BucketUsers(mapping: [(CanisterKind, [(Nat, Principal)])]) = this {
+  let thisPrincipal = Principal.fromActor(this);
   let owner = caller;
 
-  include MixinCanistersMapping(owner, mapping);
+  include MixinCanistersMapping(thisPrincipal, owner, mapping);
   
   // ===== MEMORY =====
 

@@ -3,8 +3,6 @@ import Principal "mo:core/Principal";
 import Error "mo:core/Error";
 import BucketUsers "../buckets/bucketUsers/BucketUsers";
 import Errors "../../shared/Errors";
-import SearchUsersByName "../search/SearchUsersByName";
-import SearchUsersByEmail "../search/SearchUsersByEmail";
 
 mixin({userRing: [Principal]; findUserBucket: ( [Principal], Principal) -> Principal}) {
   // // ===== TYPES =====

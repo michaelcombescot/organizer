@@ -71,7 +71,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
           };
         };
       } catch (e) {
-        Debug.print("Job execution threw: " # Error.message(e));
+        Debug.print("Job execution threw: " # e.message());
         handleJobFailure(jobWrapper);
       };
 
@@ -111,14 +111,14 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   // ===== HANDLERS =====
 
   public shared ({ caller }) func handlerCreateJob(job: Job) : async Result<(), HandlerErr> {
-    if (not Principal.isController(caller)) return #err(#errMustBeController);
+    if (not caller.isController()) return #err(#errMustBeController);
 
     ignore createAndProcessJob(job);
     #ok(())
   };
 
   public shared ({ caller }) func handlerRequeueFailedJobImmediatly(jobId: Nat) : async Result<(), HandlerErr> {
-    if (not Principal.isController(caller)) return #err(#errMustBeController);
+    if (not caller.isController()) return #err(#errMustBeController);
 
     let ?failedJob = memJobFailed.get(jobId) else return #err(#errNotFound);
     
@@ -133,7 +133,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   };
 
   public shared ({ caller }) func handlerRequeueAllFailedJobs() : async Result<(), HandlerErr> {
-    if (not Principal.isController(caller)) return #err(#errMustBeController);
+    if (not caller.isController()) return #err(#errMustBeController);
 
     let failedEntries = memJobFailed.entries().toArray();
 
@@ -148,7 +148,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   };
 
   public query ({ caller }) func handlerGetFailedJobs() : async Result<[JobWrapper], HandlerErr> {
-    if (not Principal.isController(caller)) return #err(#errMustBeController);
+    if (not caller.isController()) return #err(#errMustBeController);
 
     #ok(memJobFailed.values().toArray())
   };

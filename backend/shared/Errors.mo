@@ -7,6 +7,7 @@ module {
         #errNotFound;
         #errBadRequest: Text;
         #errMissingCanister;
+        #errBadCanister;
         #errValidation: [ValidationErr];
     };
 

@@ -39,7 +39,7 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
     msg : {
       #handlerCreateCanister : () -> (kind : CanisterKind);
       #handlerUpgradeCanisterKind : () -> (nature : CanisterKind, wasmModule : Blob.Blob)
-    } or InspectParamsMsgKnownCanistersByKind or InspectParamsMsgUserMapping;
+    } or InspectParamsMsgUserMapping;
   };
 
   system func inspect(params: inspectParams) : Bool {
@@ -48,11 +48,10 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<{version: Nat; mapping: [(CanisterKind, [Principal])]}, Errors.HandlerErr> {
-    if ( not isKnown(caller) ) return #err(#errForbidden);
+  public query ({ caller }) func handlerGetFullMapping() : async [(CanisterKind, [Principal])] {
+    if ( not isKnown(caller) ) return [];
 
-
-    #ok({version = memMappingVersion; mapping = knownCanistersTuples()})
+    knownCanistersToTuples()
   };
 
   public shared ({ caller }) func handlerCreateCanister(kind: CanisterKind) : async Result.Result<Principal, Errors.HandlerErr> {

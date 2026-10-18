@@ -12,21 +12,11 @@ The architecture consist of several canisters:
 
 Own the bucket rings, create new buckets, top up all buckets, is the source of truth for the whole app.
 It have 3 endpoints:
-- one to get all principals of buckets of a specific kind. This endpoint will be paired with a bash script to loop on those principals and update 
+- one to get all principals of buckets of a specific kind. This endpoint will be paired with a bash script to loop on those principals and update
 ```
-// rust
-use ic_cdk::management_canister::{install_code, InstallCodeArgs, CanisterInstallMode};
 
-#[ic_cdk::update(guard="is_controller")]
-async fn upgrade_child(canister_id: Principal, wasm_module: Vec<u8>) {
-    let args = InstallCodeArgs {
-        mode: CanisterInstallMode::Upgrade(None),
-        canister_id,
-        wasm_module,
-        arg: vec![],
-    };
-    install_code(&args).await.expect("Failed to upgrade child canister");
-}
+```
+- one to update a specific canister from it's principal:
 
 // motoko
 import Management "ic:aaaaa-aa";
@@ -43,3 +33,5 @@ public shared ({ caller }) func upgradeChild(canisterId : Principal, newWasm : B
   });
 };
 ```
+
+- 
