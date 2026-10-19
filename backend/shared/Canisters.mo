@@ -13,12 +13,8 @@ module {
     };
 
     public type SearchKind = {
-      #searchUsersByName;
-      #searchUsersByEmail;
+      #search;
     };
-
-    // NEVER FORGET TO UPDATE THIS WHEN ADDING NEW SEARCH KINDS
-    public let allSearchKinds : [SearchKind] = [#searchUsersByName, #searchUsersByEmail];
 
     public type BucketKind = {
       #bucketUsers;

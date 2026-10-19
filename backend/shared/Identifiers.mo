@@ -8,7 +8,7 @@ module {
         bucket: Principal;
     };
 
-    public func compareIdentifiers(a: Identifier, b: Identifier) : Order.Order {
+    public func compare(a: Identifier, b: Identifier) : Order.Order {
         if ( Principal.compare(a.bucket, b.bucket) == #equal ) {
             switch ( Nat.compare(a.id, b.id) ) {
                 case (#equal) #equal;

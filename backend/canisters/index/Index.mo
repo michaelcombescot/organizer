@@ -7,8 +7,7 @@ import { Kind = {type CanisterKind} } "../../shared/Canisters";
 shared ({ caller }) persistent actor class Index(canisters: [(CanisterKind, Principal)], userRing: [Principal]) = this {
   let owner = caller;
 
-  include MixinCanistersByKind(canisters);
-  include MixinCanistersSlots(canisters);
+  include MixinCanistersMapping(canisters);
   include MixinUsers({ userRing = userRing; findUserBucket = helperFindByPrincipal });
 
   // ===== SYSTEM =====
@@ -16,7 +15,7 @@ shared ({ caller }) persistent actor class Index(canisters: [(CanisterKind, Prin
   type InspectParams = {
       arg: Blob;
       caller : Principal;
-      msg : InspectParamsMsgUsers or InspectParamsMsgUserMapping or InspectParamsMsgKnownCanistersByKind;
+      msg : InspectParamsMsgUsers;
   };
 
   system func inspect(params: InspectParams) : Bool {
@@ -30,5 +29,12 @@ shared ({ caller }) persistent actor class Index(canisters: [(CanisterKind, Prin
           case (#handlerRemoveKnownCanistersByKind(_)) params.caller.isController();
           case (#handlerGetCurrentUserBucket(_)) true;
       }
+  };
+
+  public shared ({ caller }) func updateMapping(kind: CanisterKind) : async [Principal] {
+    switch ( memMapping.get(kind) ) {
+      case (?map) Map.keys(map);
+      case (null) [];
+    }
   };
 };

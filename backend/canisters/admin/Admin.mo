@@ -15,8 +15,7 @@ import Queue "mo:core/Queue";
 import Timer "mo:core/Timer";
 import Errors "../../shared/Errors";
 import Configs "../../Configs";
-import SearchUsersByEmail "../search/SearchUsersByEmail";
-import SearchUsersByName "../search/SearchUsersByName";
+import Search "../search/Search";
 import Index "../index/Index";
 import BucketUsers "../buckets/bucketUsers/BucketUsers";
 import IC "mo:ic/Types";
@@ -70,8 +69,7 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
         };
         case (#search(k)) {
           switch (k) {
-            case (#searchUsersByEmail) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) SearchUsersByEmail.SearchUsersByEmail(knownIndexes()));
-            case (#searchUsersByName) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) SearchUsersByName.SearchUsersByName(knownIndexes()));
+            case (#searchUsersByEmail) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) Search.SearchUsersByEmail(knownIndexes()));
           };
         };
       };
@@ -83,29 +81,15 @@ shared ({ caller = owner }) persistent actor class Admin() = this {
 
     saveCanisters([(kind, newPrincipal)]);
 
-    // 3. SEND THE NEW CANISTER TO ALL RELEVANT CANISTERS
+    // 3. SEND THE NEW CANISTER TO ALL INDEXES
 
-    switch (kind) {
-      case (#registryIndexes) ();
-      case (#index) {
-        // send to buckets and search canisters
-        let targets = List.empty<Principal>();
-
-        allSearchKinds.forEach(func (searchKind) { 
-          let ?map = memKnownCanistersByKind.get(compareCanisterKind, #search(searchKind)) else return;
-          targets.addAll(Map.keys(map));
-        });
-        allBucketKinds.forEach(func (bucketKind) { 
-          let ?map = memKnownCanistersByKind.get(compareCanisterKind, #bucket(bucketKind)) else return;
-          targets.addAll(Map.keys(map));
-        });
+    switch ( memMapping.get(#index) ) {
+      case (?indexes) {
+        for ((_, indexPrincipal) in indexes) {
+          // Send the new canister to each index
+        };
       };
-      case (#bucket(_), #search(_)) {
-        let targets = knownIndexes();
-      };
-      case (#search(k)) {
-        let targets = knownIndexes();
-      };
+      case (null) ();
     };
 
 

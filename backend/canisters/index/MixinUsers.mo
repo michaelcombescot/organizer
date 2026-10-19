@@ -15,9 +15,9 @@ mixin({userRing: [Principal]; findUserBucket: ( [Principal], Principal) -> Princ
   //   #confirmIndex: {}
   // };
 
-  // type InspectParamsMsgUsers = {
-  //   #handlerGetCurrentUserBucket : () -> ();
-  // };
+  type InspectParamsMsgUsers = {
+    #handlerGetCurrentUserBucket : () -> ();
+  };
 
   // // ===== HANDLERS =====
 
