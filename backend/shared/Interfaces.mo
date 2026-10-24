@@ -8,7 +8,7 @@ module Interfaces {
     #queriesIndex
   };
 
-  public type IQueriesIndexTextActor = actor {
+  public type ActorSearchIndex = actor {
     handlerSaveEntry : shared {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text} -> async Result<(), Errors.HandlerErr>;
     handlerLiberateEntry : shared { kind: ReqKind.ReqKind; key: Text } -> async Result<(), Errors.HandlerErr>;
   };

@@ -4,7 +4,7 @@ import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import { CanisterKind; IndexKind } "../../shared/Canisters";
 
-shared ({ caller }) actor class RegistryIndex() = this {
+shared ({ caller }) actor class RegistryIndexes() = this {
   include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#registryIndexes); canisters = [] });
 
   // ===== SYSTEM =====
@@ -29,7 +29,7 @@ shared ({ caller }) actor class RegistryIndex() = this {
   public query ({ caller}) func handlerGetIndexes(kind: IndexKind.IndexKind) : async [Principal] {
     if ( caller.isAnonymous() ) return [];
 
-    let ?map = memMapping.get(#indexes(kind)) else return [];
+    let ?map = memMapping.get(#dynamic(#index(kind))) else return [];
 
     map.values().toArray()
   };

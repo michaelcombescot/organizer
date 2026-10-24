@@ -1,4 +1,8 @@
 canisters:
+  - name: admin
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+
   - name: indexMain
     recipe:
       type: "@dfinity/motoko@v5.1.0"

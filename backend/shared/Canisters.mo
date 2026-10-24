@@ -9,12 +9,7 @@ module {
       // declared directly in the icp.yaml, known from the frontend, wll be called exclusively for discovery
       // or very specific tasks, no data associated
       #static: StaticKind.StaticKind;
-      // canisters responsible of redirecting the frontend to the right canister
-      #indexes: IndexKind.IndexKind;
-      // all canisters for storing data
-      #buckets: BucketKind.BucketKind;
-      // all canisters for system wide search queries
-      #queries: QueryKind.QueryKind; // canister responsible for handling global search operations
+      #dynamic: DynamicKind.DynamicKind;
     };
 
     public func compare(a: CanisterKind, b: CanisterKind) : Order.Order {
@@ -30,6 +25,21 @@ module {
     };
 
     public func compare(a: StaticKind, b: StaticKind) : Order.Order {
+      Text.compare(debug_show(a), debug_show(b));
+    };
+  };
+
+  public module DynamicKind {
+    public type DynamicKind = {
+      // canisters responsible of redirecting the frontend to the right canister
+      #index: IndexKind.IndexKind;
+      // all canisters for storing data
+      #bucket: BucketKind.BucketKind;
+      // all canisters for system wide search queries
+      #search: SearchKind.SearchKind; // canister responsible for handling global search operations
+    };
+
+    public func compare(a: DynamicKind, b: DynamicKind) : Order.Order {
       Text.compare(debug_show(a), debug_show(b));
     };
   };
@@ -54,12 +64,12 @@ module {
     };
   };
   
-  public module QueryKind {
-    public type QueryKind = {
-      #queriesIndex; // canister responsible for global search operations on text values
+  public module SearchKind {
+    public type SearchKind = {
+      #searchIndex; // canister responsible for global search operations on text values
     };
 
-    public func compare(a: QueryKind, b: QueryKind) : Order.Order {
+    public func compare(a: SearchKind, b: SearchKind) : Order.Order {
       Text.compare(debug_show(a), debug_show(b));
     };
   };

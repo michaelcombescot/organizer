@@ -2,12 +2,12 @@ import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import { hashText } "../Hash";
 import Principal "mo:core/Principal";
-import { CanisterKind } "../Canisters";
+import { CanisterKind; DynamicKind } "../Canisters";
 import { type Result } "mo:core/Result";
 import Iter "mo:core/Iter";
 import List "mo:core/List";
 import { type HandlerErr } "../Errors";
-import { type IQueriesIndexTextActor } "../Interfaces";
+import { type ActorSearchIndex } "../Interfaces";
 
 mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])]}) {
   // ===== INSPECT =====
@@ -69,8 +69,8 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(Cani
 
   // === Find canister ===
 
-  func findCanister(kind: CanisterKind.CanisterKind, text: Text) : ?Principal {
-    let ?map = memMapping.get(kind) else return null;
+  func findCanister(kind: DynamicKind.DynamicKind, text: Text) : ?Principal {
+    let ?map = memMapping.get(#dynamic(kind)) else return null;
 
     let index = hashText(text) % map.size();
 
@@ -78,6 +78,11 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(Cani
       case (?entry) ?entry.1;
       case null null;
     }
+  };
+
+  func createActorSearchIndexFor(text: Text) : ?ActorSearchIndex {
+    let ?principal = findCanister(#search(#searchIndex), text) else return null;
+    ?(actor(principal.toText()) : ActorSearchIndex)
   };
 
   // ===== INIT =====

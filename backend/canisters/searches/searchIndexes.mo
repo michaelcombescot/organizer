@@ -12,10 +12,10 @@ import { ReqKind } "../../models/Req";
 import Loc "../../shared/Loc";
 import Errors "../../shared/Errors";
 
-shared ({ caller }) actor class QueriesIndex(mapping: [(CanisterKind, [(Nat, Principal)])]) = this {
+shared ({ caller }) actor class SearchIndexes(mapping: [(CanisterKind, [(Nat, Principal)])]) = this {
   let thisPrincipal = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #queries(#queriesIndex); canisters = mapping });
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#search(#searchIndex)); canisters = mapping });
 
   // ===== MEMORY =====
 
