@@ -1,4 +1,4 @@
-import { Kind = {type CanisterKind} } "../shared/Canisters";
+import { CanisterKind = {type CanisterKind} } "../shared/Canisters";
 
 module {
   public type Job = {

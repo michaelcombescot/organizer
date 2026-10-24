@@ -1,21 +1,21 @@
 module {
-    public type HandlerErr = {
-        #errInterCanisterCall: Text;
-        #errMustNotBeAnonymous;
-        #errMustBeController;
-        #errForbidden;
-        #errNotFound;
-        #errBadRequest: Text;
-        #errMissingCanister;
-        #errBadCanister;
-        #errValidation: [ValidationErr];
-    };
+  public type HandlerErr = {
+    #errInterCanisterCall: Text;
+    #errMustNotBeAnonymous;
+    #errMustBeController;
+    #errForbidden;
+    #errNotFound;
+    #errMemoryLimitReached; // used when a canister memory limit is reached
+    #errBadRequest: Text;
+    #errWrongCanister; // used when a bucket/search is selected albeit it's the wrong range
+    #errCanisterFull; // used when a canister memory is full
+    #errIndexAlreadyExists; // used when an index entry already exists
+    #errValidation: [ValidationErr];
+    #errUpdateFailed: { field: Text };
+  };
 
-    public type ValidationErr = {
-        field: Text;
-        message: Text;
-    };
-
-    public let ALREADY_TAKEN = "ALREADY_TAKEN";
-    public let RESERVATION_EXPIRED = "RESERVATION_EXPIRED";
+  public type ValidationErr = {
+    #alreadyExists: { field: Text };
+    #badLength: {field: Text; min: Nat; max: Nat};
+  };
 }

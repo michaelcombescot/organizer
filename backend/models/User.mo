@@ -2,12 +2,12 @@ import Map "mo:core/Map";
 import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Text "mo:core/Text";
-import Identifiers "../shared/Identifiers";
+import Loc "../shared/Loc";
 
 module {
   public type User = {
     data: UserData;
-    groups: Map.Map<Identifiers.Identifier, ()>;
+    groups: Map.Map<Loc.Loc, ()>;
     createdAt: Time.Time;
     updatedAt: Time.Time;
   };
@@ -20,7 +20,7 @@ module {
   public type PublicUser = {
     name : Text;
     email : Text;
-    groups : [Identifiers.Identifier];
+    groups : [Loc.Loc];
     createdAt : Time.Time;
     updatedAt : Time.Time;
   };

@@ -5,7 +5,16 @@ ic = "4.2.0"
 [toolchain]
 moc = "2.0.0"
 
-[canisters.index]
+[canisters.admin]
+main = "backend/admin/Admin.mo"
+
+[canisters.factory]
+main = "backend/factory/Factory.mo"
+
+[canisters.RegistryIndexes]
+main = "backend/registry/RegistryIndexes.mo"
+
+[canisters.indexMain]
 main = "backend/canisters/index/Index.mo"
 
 [canisters.SearchUsersByName]

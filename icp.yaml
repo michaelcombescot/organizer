@@ -1,5 +1,5 @@
 canisters:
-  - name: index
+  - name: indexMain
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 

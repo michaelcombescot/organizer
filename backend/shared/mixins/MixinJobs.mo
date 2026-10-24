@@ -8,10 +8,15 @@ import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Iter "mo:core/Iter";
 import { type Job } "../../models/Job";
-import Configs "../../Configs";
 import { type HandlerErr } "../Errors";
 
 mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) {
+  // ===== CONFIG =====
+
+  let JOB_MAX_CONCURRENT = 250;
+  let JOB_RETRY_DELAY = 60; // in seconds
+  let JOB_MAX_RETRY = 3;
+
   // ===== STRUCTURES =====
 
   type JobWrapper = {
@@ -53,7 +58,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   };
 
   func processJob(jobWrapper: JobWrapper) : async () {
-    if (memJobRunning.size() > Configs.JOB_MAX_CONCURRENT) return;
+    if (memJobRunning.size() > JOB_MAX_CONCURRENT) return;
     if (memJobRunning.containsKey(jobWrapper.jobId)) return;
     if (Time.now() < jobWrapper.retryAt) return;
 
@@ -86,9 +91,9 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   };
 
   func handleJobFailure(job: JobWrapper) : () {
-    let updatedJob = { job with nbRetry = job.nbRetry + 1; retryAt = Time.now() + Configs.JOB_RETRY_DELAY };
+    let updatedJob = { job with nbRetry = job.nbRetry + 1; retryAt = Time.now() + JOB_RETRY_DELAY };
     
-    if (updatedJob.nbRetry >= Configs.JOB_MAX_RETRY) {
+    if (updatedJob.nbRetry >= JOB_MAX_RETRY) {
       memJobFailed.add(updatedJob.jobId, updatedJob);
       memJobs.remove(updatedJob.jobId);
     } else {
@@ -99,7 +104,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   // ===== TIMERS =====
 
   ignore Timer.recurringTimer<system>(
-    #seconds(recurringDelay), 
+    #seconds(JOB_RETRY_DELAY), 
     func () : async () {
       
       for ((jobId, jobWrapper) in memJobs.entries()) {
