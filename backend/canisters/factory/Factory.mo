@@ -12,7 +12,7 @@ import Array "mo:core/Array";
 import Queue "mo:core/Queue";
 import Timer "mo:core/Timer";
 import Errors "../../shared/Errors";
-import QueriesIndex "../queries/QueriesIndex";
+import SearchIndexes "../searches/SearchIndexes";
 import IndexMain "../indexes/IndexMain";
 import BucketUsers "../buckets/bucketUsers/BucketUsers";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
