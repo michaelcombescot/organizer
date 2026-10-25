@@ -8,14 +8,15 @@ import Result "mo:core/Result";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import { type HandlerErr } "../../shared/Errors";
 import { CanisterKind = { type CanisterKind } } "../../shared/Canisters";
-import { ReqKind } "../../models/Req";
+import { Mapping } "../../shared/Canisters";
+import { ReqKind } "../../shared/Req";
 import Loc "../../shared/Loc";
 import Errors "../../shared/Errors";
 
-shared ({ caller }) actor class SearchIndexes(mapping: [(CanisterKind, [(Nat, Principal)])]) = this {
+shared ({ caller }) actor class SearchIndexes(mapping: Mapping.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#search(#searchIndex)); canisters = mapping });
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#search(#searchIndex)); mapping = mapping });
 
   // ===== MEMORY =====
 
@@ -30,14 +31,14 @@ shared ({ caller }) actor class SearchIndexes(mapping: [(CanisterKind, [(Nat, Pr
       #handlerPublicSearch : () -> { requests: [(ReqKind.ReqKind, Text)]; limit: Nat };
       #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text};
       #handlerLiberateEntry : () -> { kind: ReqKind.ReqKind; key: Text };
-    } or InspectMappingMsg
+    }
   };
 
   system func inspect(params: inspectParams) : Bool {
     if ( params.caller.isAnonymous() ) return false;
     if ( params.arg.size() > 5000 ) return false;
 
-    isKnown(params.caller)
+    true
   };
 
   // ===== HANDLERS =====
@@ -65,7 +66,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: [(CanisterKind, [(Nat, Pr
   };
 
   public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text }) : async Result<(), Errors.HandlerErr> {
-    if ( not isKnown(caller) ) return #err(#errForbidden);
+    if ( not (await isKnown(caller)) ) return #err(#errForbidden);
 
     let ?map = memQuery.get(kind) else { return #err(#errNotFound) };
     
@@ -77,7 +78,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: [(CanisterKind, [(Nat, Pr
   };
 
   public shared ({ caller }) func handlerLiberateEntry({ kind: ReqKind.ReqKind; key: Text }) : async Result<(), Errors.HandlerErr> {
-    if ( not isKnown(caller) ) return #err(#errForbidden);
+    if ( not (await isKnown(caller)) ) return #err(#errForbidden);
 
     let ?map = memQuery.get(kind) else return #ok;    
     map.remove(key);

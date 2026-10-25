@@ -73,4 +73,11 @@ module {
       Text.compare(debug_show(a), debug_show(b));
     };
   };
+
+  public module Mapping {
+    public type Mapping = {
+      version: Nat;
+      canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])];
+    };
+  };
 }

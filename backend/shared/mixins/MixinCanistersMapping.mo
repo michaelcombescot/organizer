@@ -1,31 +1,59 @@
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
+import Error "mo:core/Error";
 import { hashText } "../Hash";
 import Principal "mo:core/Principal";
-import { CanisterKind; DynamicKind } "../Canisters";
+import { CanisterKind; Mapping; StaticKind } "../Canisters";
 import { type Result } "mo:core/Result";
 import Iter "mo:core/Iter";
 import List "mo:core/List";
+import Time "mo:core/Time";
+import Debug "mo:core/Debug";
 import { type HandlerErr } "../Errors";
-import { type ActorSearchIndex } "../Interfaces";
+import { type ActorSearchIndex; type ActorFactory; } "../Interfaces";
 
-mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])]}) {
-  // ===== INSPECT =====
-
-  type InspectMappingMsg = {
-    #handlerUpdateMapping : () -> ({ version: Nat; canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])] });
-  };
+mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.Mapping }) {
+  // ===== CONSTANTS =====
+  let STALE_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
 
   // ===== MEMORY =====
 
+  var lastVersionMaj : Time.Time = Time.now();
   var currentVersion = 0;
   let memKnownCanisters = Map.empty<Principal, ()>();
   let memMapping = Map.empty<CanisterKind.CanisterKind, Map.Map<Nat, Principal>>();
 
   // === Permissions ===
 
-  func isKnown(caller: Principal) : Bool {
-    memKnownCanisters.containsKey(caller)
+  func isKnownBasic(caller: Principal) : Bool {
+    memKnownCanisters.containsKey(caller) or caller.isController();
+  };
+
+  func isKnown(caller: Principal) : async Bool {
+    if ( isKnownBasic(caller) ) return true;
+    
+    if ( lastVersionMaj < Time.now() - STALE_THRESHOLD ) return false;
+
+    let ?factories = memMapping.get(#static(#factory)) else return false;
+    let ?factory = factories.get(0) else return false;
+
+    let actorFactory = actor(factory.toText()) : ActorFactory;
+
+    try {
+      switch ( await actorFactory.handlerGetFullMapping() ) {
+        case (#ok(newMapping)) {
+          if (newMapping.version <= currentVersion) return false;
+
+          saveMapping(newMapping);
+        };
+        case (#err(_)) return false;
+      };
+    } catch e {
+      Debug.print("Error fetching full mapping: " # e.message());
+      return false;
+    };
+
+    true;
   };
 
   func isInRange(key: Text) : Bool {
@@ -39,8 +67,24 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(Cani
 
   // === Save and format Canisters memory ===
 
-  func saveCanisters(canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])]) : () {
-    for ( (kind, principals) in canisters.values() ) {
+  func addStaticCanisters(canisters: [(StaticKind.StaticKind, Principal)]) : () {
+    for ((kind, principal) in canisters.values()) {
+      let map = switch ( memMapping.get(#static(kind)) ) {
+        case null {
+          let map = Map.empty<Nat, Principal>();
+          memMapping.add(#static(kind), map);
+          map
+        };
+        case (?map) map;
+      };
+
+      map.add(0, principal);
+      memKnownCanisters.add(principal, ());
+    };
+  };
+
+  func saveMapping(mapping: Mapping.Mapping) : () {
+    for ( (kind, principals) in mapping.canisters.values() ) {
       let map = switch ( memMapping.get(kind) ) {
         case null {
           let map = Map.empty<Nat, Principal>();
@@ -55,22 +99,25 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(Cani
         memKnownCanisters.add(principal, ());
       };
     };
+
+    lastVersionMaj := Time.now();
+    currentVersion := mapping.version;
   };
 
-  func knownCanistersToTuples() : [(CanisterKind.CanisterKind, [(Nat, Principal)])] {
+  func knownCanistersToMapping() : Mapping.Mapping {
     let result = List.empty<(CanisterKind.CanisterKind, [(Nat, Principal)])>();
 
     for ( (kind, map) in memMapping.entries() ) {
       result.add((kind, (map.entries().toArray())));
     };
 
-    result.toArray()
+    { version = currentVersion; canisters = result.toArray() }
   };
 
   // === Find canister ===
 
-  func findCanister(kind: DynamicKind.DynamicKind, text: Text) : ?Principal {
-    let ?map = memMapping.get(#dynamic(kind)) else return null;
+  func findCanisterFromText(kind: CanisterKind.CanisterKind, text: Text) : ?Principal {
+    let ?map = memMapping.get(kind) else return null;
 
     let index = hashText(text) % map.size();
 
@@ -80,30 +127,23 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; canisters: [(Cani
     }
   };
 
+  func findCanisterFromIndex(kind: CanisterKind.CanisterKind, index: Nat) : ?Principal {
+    let ?map = memMapping.get(kind) else return null;
+
+    let idx = index % map.size();
+
+    switch ( map.reverseEntriesFrom(idx).next() ) {
+      case (?entry) ?entry.1;
+      case null null;
+    }
+  };
+
   func createActorSearchIndexFor(text: Text) : ?ActorSearchIndex {
-    let ?principal = findCanister(#search(#searchIndex), text) else return null;
+    let ?principal = findCanisterFromText(#dynamic(#search(#searchIndex)), text) else return null;
     ?(actor(principal.toText()) : ActorSearchIndex)
   };
 
   // ===== INIT =====
 
-  if (memKnownCanisters.size() == 0) saveCanisters(canisters);
-
-  // ===== HANDLER =====
-
-  public shared ({ caller }) func handlerUpdateMapping({
-    version: Nat;
-    canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])]
-  }) : async Result<(), HandlerErr> {
-    if ( not caller.isController() ) return #err(#errForbidden);
-
-    if (version <= currentVersion) return #ok;
-
-    memKnownCanisters.clear();
-    memMapping.clear();
-
-    currentVersion := version;
-    saveCanisters(canisters);
-    #ok
-  };
+  if (memKnownCanisters.size() == 0) saveMapping(mapping);
 }

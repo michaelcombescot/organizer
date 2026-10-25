@@ -1,28 +1,46 @@
-import Debug "mo:core/Debug";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Error "mo:core/Error";
 import Blob "mo:core/Blob";
-import List "mo:core/List";
 import Runtime "mo:core/Runtime";
-import { CanisterKind } "../../shared/Canisters";
-import Array "mo:core/Array";
-import Queue "mo:core/Queue";
-import Timer "mo:core/Timer";
+import { CanisterKind; DynamicKind; StaticKind } "../../shared/Canisters";
+import Time "mo:core/Time";
 import Errors "../../shared/Errors";
 import SearchIndexes "../searches/SearchIndexes";
 import IndexMain "../indexes/IndexMain";
-import BucketUsers "../buckets/bucketUsers/BucketUsers";
+import BucketUsers "../buckets/BucketUsers";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 
-shared ({ caller = owner }) persistent actor class Factory() = this {
+shared ({ caller = owner }) actor class Factory() = this {
   let thisPrincipal = Principal.fromActor(this);
+
+  // ===== CONFIGS =====
+
+  func confGetNewCanisterNbCycles (kind: DynamicKind.DynamicKind) : Nat {
+    switch (kind) {
+      case (#index(i)) {
+        switch (i) {
+          case (#indexMain) return 1_000_000_000_000;
+        }
+      };
+      case (#search(s)) {
+        switch (s) {
+          case (#searchIndex) return 1_000_000_000_000;
+        }
+      };
+      case (#bucket(b)) {
+        switch (b) {
+          case (#bucketUsers) return 1_000_000_000_000;
+        }
+      };
+    };
+  };
 
   // ===== MEMORY =====
 
-  include MixinCanistersMapping([]);
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #static(#factory); mapping = { version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] } });
 
   // ===== SYSTEM =====
 
@@ -30,57 +48,102 @@ shared ({ caller = owner }) persistent actor class Factory() = this {
     arg : Blob;
     caller : Principal;
     msg : {
-      #handlerCreateCanister : () -> (kind : CanisterKind.CanisterKind);
-    } or InspectMappingMsg;
+      #systemAddStaticCanisters : () -> (canisters : [(StaticKind.StaticKind, Principal)]);
+
+      #handlerGetFullMapping : () -> ();
+      #handlerCreateCanister : () -> (kind : DynamicKind.DynamicKind);
+    };
   };
 
   system func inspect(params: inspectParams) : Bool {
-    params.caller.isController()
+    if ( params.caller.isAnonymous()) return false;
+
+    return true
+  };
+
+  public shared ({ caller }) func systemAddStaticCanisters(canisters: [(StaticKind.StaticKind, Principal)]) : async Result.Result<(), Errors.HandlerErr> {
+    if ( not isKnownBasic(caller) ) return #err(#errForbidden);
+
+    addStaticCanisters(canisters);
+    #ok
+  };
+
+  // ===== INIT =====
+
+  if (memMapping.size() == 0) saveMapping({ version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] });
+
+  // ===== HELPERS =====
+
+  func addCanister(kind: CanisterKind.CanisterKind, principal: Principal) : () {
+    let map = switch ( memMapping.get(kind) ) {
+      case null {
+        let map = Map.empty<Nat, Principal>();
+        memMapping.add(kind, map);
+        map
+      };
+      case (?map) map;
+    };
+
+    let index = switch ( kind ) {
+      case (#static(_)) 0;
+      case (#dynamic(k)) {
+        switch (k) {
+          case (#index(_)) map.size();
+          case (#search(_)) Runtime.trap("Cannot determine index for search canisters");
+          case (#bucket(b)) {
+            switch (b) {
+              case (#bucketUsers) Runtime.trap("Cannot determine index for bucketUsers");
+            };
+          }
+        }
+      };
+    };
+
+    map.add(index, principal);
+    memKnownCanisters.add(principal, ());
+    currentVersion := currentVersion + 1;
+    lastVersionMaj := Time.now();
   };
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetFullMapping() : async [(CanisterKind.CanisterKind, [(Nat, Principal)])] {
-    if ( not (isKnown(caller) or caller.isController()) ) return [];
+  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<{ version: Nat; canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])] }, Errors.HandlerErr> {
+    if ( not (isKnownBasic(caller)) ) return #err(#errForbidden);
 
-    knownCanistersToTuples()
+    #ok({ version = currentVersion; canisters = knownCanistersToMapping().canisters })
   };
 
-  public shared ({ caller }) func handlerAddIndex(indexPrincipal: Principal) : async Result.Result<(), Errors.HandlerErr> {
-    if ( not isKnown(caller) ) return #err(#errForbidden);
+  public shared ({ caller }) func handlerCreateCanister(kind: DynamicKind.DynamicKind) : async Result.Result<Principal, Errors.HandlerErr> {
+    if ( not isKnownBasic(caller) ) return #err(#errForbidden);
 
-    saveCanisters([(#index, [(0, indexPrincipal)])]);
-
-    #ok(())
-  };
-
-  public shared ({ caller }) func handlerCreateCanister(kind: CanisterKind.CanisterKind) : async Result.Result<Principal, Errors.HandlerErr> {
-    if ( not (isKnown(caller) or caller.isController()) ) return #err(#errForbidden);
-
-     // 1. CREATE THE CANISTER
+    // 1. CREATE THE CANISTER
+    let nbCycles = confGetNewCanisterNbCycles(kind);
 
     let newPrincipal = try {
       switch (kind) {
-        case (#registryIndexes) return #err(#errBadRequest("Cannot create canister of kind registryIndexes"));
-        case (#index) return #err(#errBadRequest("Cannot create canister of kind index"));
-        case (#bucket(b)) {
-          switch (b) {
-            case (#bucketUsers) Principal.fromActor(await (with cycles = Configs.NEW_BUCKET_NB_CYCLES) BucketUsers.BucketUsers(knownIndexes()));
+        case (#index(i)) {
+          switch (i) {
+            case (#indexMain) Principal.fromActor(await (with cycles = nbCycles) IndexMain.IndexMain(knownCanistersToMapping()));
+          };
+        } 
+        case (#search(s)) {
+          switch (s) {
+            case (#searchIndex) Principal.fromActor(await (with cycles = nbCycles) SearchIndexes.SearchIndexes(knownCanistersToMapping()));
           };
         };
-        case (#search(k)) {
-          switch (k) {
-            case (#search) Principal.fromActor(await (with cycles = Configs.NEW_SEARCH_NB_CYCLES) Search.SearchUsersByEmail(knownIndexes()));
+        case (#bucket(b)) {
+          switch (b) {
+            case (#bucketUsers) Principal.fromActor(await (with cycles = nbCycles) BucketUsers.BucketUsers(knownCanistersToMapping()));
           };
         };
       };
     } catch (e) {
-      return #err(#errInterCanisterCall("Cannot create canister, error: " # Error.message(e)))
+      return #err(#errInterCanisterCall("Cannot create canister, error: " # e.message()))
     };
 
     // 2. SAVE THE CANISTER INFORMATION
 
-    saveCanisters([(kind, newPrincipal)]);
+    addCanister(#dynamic(kind), newPrincipal);
 
     #ok(newPrincipal)
   };

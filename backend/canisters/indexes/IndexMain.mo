@@ -4,14 +4,14 @@ import Hash "../../shared/Hash";
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
-import { CanisterKind } "../../shared/Canisters";
+import { CanisterKind; Mapping } "../../shared/Canisters";
 import { type Result } "mo:core/Result";
 import { type HandlerErr } "../../shared/Errors";
 
-shared ({ caller }) actor class IndexMain(canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])]) = this {
+shared ({ caller }) actor class IndexMain(mapping: Mapping.Mapping) = this {
   let self = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = self; selfKind = #dynamic(#index(#indexMain)); canisters = canisters });
+  include MixinCanistersMapping({ self = self; selfKind = #dynamic(#index(#indexMain)); mapping = mapping });
 
   // ===== SYSTEM =====
 
@@ -20,7 +20,7 @@ shared ({ caller }) actor class IndexMain(canisters: [(CanisterKind.CanisterKind
       caller : Principal;
       msg : {
         #handlerGetCurrentUserBucket : () -> ();
-      } or InspectMappingMsg;
+      };
   };
 
   system func inspect(params: InspectParams) : Bool {

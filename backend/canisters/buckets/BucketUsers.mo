@@ -5,19 +5,20 @@ import Error "mo:core/Error";
 import Nat32 "mo:core/Nat32";
 import Blob "mo:core/Blob";
 import Time "mo:core/Time";
-import User "../../../models/User";
-import { type User; type PublicUser } "../../../models/User";
-import Errors "../../../shared/Errors";
-import Loc "../../../shared/Loc";
-import { CanisterKind } "../../../shared/Canisters";
-import MixinCanistersMapping "../../../shared/mixins/MixinCanistersMapping";
-import { type Job } "../../../models/Job";
+import User "../../models/User";
+import { type User; type PublicUser } "../../models/User";
+import Errors "../../shared/Errors";
+import Loc "../../shared/Loc";
+import { CanisterKind } "../../shared/Canisters";
+import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
+import { Mapping } "../../shared/Canisters";
+import { type Job } "../../models/Job";
 
-shared ({ caller }) actor class BucketUsers(mapping: [(CanisterKind.CanisterKind, [(Nat, Principal)])]) = this {
+shared ({ caller }) actor class BucketUsers(mapping: Mapping.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
   let thisHash = thisPrincipal.hash().toNat();
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#bucket(#bucketUsers)); canisters = mapping });
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#bucket(#bucketUsers)); mapping = mapping });
   
   // ===== CONFIGS =====
 
@@ -38,15 +39,14 @@ shared ({ caller }) actor class BucketUsers(mapping: [(CanisterKind.CanisterKind
       #handlerGetUserData : () -> ();
       #handlerUpdateMapping : () -> (canisters : [(CanisterKind.CanisterKind, [(Nat, Principal)])]);
       #handlerUpdateUser : () -> {email : Text; name : Text; }
-    } or InspectMappingMsg;
+    };
   };
 
   system func inspect(params: InspectParams) : Bool {
-      if ( params.caller == Principal.anonymous() ) { return false; };
+      if ( params.caller == Principal.anonymous() ) { return false };
+      if ( Blob.size(params.arg) > 1000 ) { return false };
 
-      if ( Blob.size(params.arg) > 1000 ) { return false; };
-
-      isKnown(params.caller) or params.caller.isController()
+      true;
   };
 
   // ===== HANDLERS =====

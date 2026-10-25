@@ -1,11 +1,13 @@
 import { type Result } "mo:core/Result";
-import { ReqKind } "../models/Req";
+import { ReqKind } "../shared/Req";
 import Errors "Errors";
 import Loc "Loc";
+import Principal "mo:core/Principal";
+import { CanisterKind } "Canisters";
 
 module Interfaces {
-  public type Interface = {
-    #queriesIndex
+  public type ActorFactory = actor {
+    handlerGetFullMapping : shared () -> async Result<{ version: Nat; canisters: [(CanisterKind.CanisterKind, [(Nat, Principal)])] }, Errors.HandlerErr>;
   };
 
   public type ActorSearchIndex = actor {

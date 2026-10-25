@@ -4,6 +4,7 @@ module {
     #errMustNotBeAnonymous;
     #errMustBeController;
     #errForbidden;
+    #errCannotVerifyCaller;
     #errNotFound;
     #errMemoryLimitReached; // used when a canister memory limit is reached
     #errBadRequest: Text;
