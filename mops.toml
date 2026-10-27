@@ -5,20 +5,20 @@ ic = "4.2.0"
 [toolchain]
 moc = "2.0.0"
 
-[canisters.admin]
-main = "backend/admin/Admin.mo"
+[canisters.Admin]
+main = "backend/canisters/admin/Admin.mo"
 
-[canisters.factory]
-main = "backend/factory/Factory.mo"
+[canisters.Factory]
+main = "backend/canisters/factory/Factory.mo"
 
 [canisters.RegistryIndexes]
-main = "backend/registry/RegistryIndexes.mo"
+main = "backend/canisters/registries/RegistryIndexes.mo"
 
-[canisters.indexMain]
-main = "backend/canisters/index/Index.mo"
+[canisters.IndexMain]
+main = "backend/canisters/indexes/IndexMain.mo"
 
-[canisters.SearchUsersByName]
-main = "backend/canisters/search/SearchUsersByName.mo"
+[canisters.SearchIndexes]
+main = "backend/canisters/searches/SearchIndexes.mo"
 
-[canisters.SearchUsersByEmail]
-main = "backend/canisters/search/SearchUsersByEmail.mo"
+[canisters.BucketUsers]
+main = "backend/canisters/buckets/BucketUsers.mo"

@@ -1,5 +1,6 @@
 module {
   public type HandlerErr = {
+    #errSystem: Text;
     #errInterCanisterCall: Text;
     #errMustNotBeAnonymous;
     #errMustBeController;

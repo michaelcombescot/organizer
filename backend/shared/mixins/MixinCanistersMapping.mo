@@ -13,8 +13,9 @@ import { type HandlerErr } "../Errors";
 import { type ActorSearchIndex; type ActorFactory; } "../Interfaces";
 
 mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.Mapping }) {
-  // ===== CONSTANTS =====
-  let STALE_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
+  // ===== CONFIGS =====
+
+  let STALE_MAPPING_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
 
   // ===== MEMORY =====
 
@@ -22,48 +23,6 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
   var currentVersion = 0;
   let memKnownCanisters = Map.empty<Principal, ()>();
   let memMapping = Map.empty<CanisterKind.CanisterKind, Map.Map<Nat, Principal>>();
-
-  // === Permissions ===
-
-  func isKnownBasic(caller: Principal) : Bool {
-    memKnownCanisters.containsKey(caller) or caller.isController();
-  };
-
-  func isKnown(caller: Principal) : async Bool {
-    if ( isKnownBasic(caller) ) return true;
-    
-    if ( lastVersionMaj < Time.now() - STALE_THRESHOLD ) return false;
-
-    let ?factories = memMapping.get(#static(#factory)) else return false;
-    let ?factory = factories.get(0) else return false;
-
-    let actorFactory = actor(factory.toText()) : ActorFactory;
-
-    try {
-      switch ( await actorFactory.handlerGetFullMapping() ) {
-        case (#ok(newMapping)) {
-          if (newMapping.version <= currentVersion) return false;
-
-          saveMapping(newMapping);
-        };
-        case (#err(_)) return false;
-      };
-    } catch e {
-      Debug.print("Error fetching full mapping: " # e.message());
-      return false;
-    };
-
-    true;
-  };
-
-  func isInRange(key: Text) : Bool {
-    let keyHash = hashText(key);
-
-    let ?map = memMapping.get(selfKind) else return false;
-    let ?entry = map.get(keyHash) else return false;
-    
-    entry == self
-  };
 
   // === Save and format Canisters memory ===
 
@@ -104,6 +63,28 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
     currentVersion := mapping.version;
   };
 
+  func getAndSaveMapping() : async () {
+    let ?factories = memMapping.get(#static(#factory)) else return ();
+    let ?factory = factories.get(0) else return ();
+
+    let actorFactory = actor(factory.toText()) : ActorFactory;
+
+    try {
+      switch ( await actorFactory.handlerGetFullMapping() ) {
+        case (#ok(newMapping)) {
+          if (newMapping.version <= currentVersion) return ();
+
+          saveMapping(newMapping);
+          return ();
+        };
+        case (#err(_)) return ();
+      };
+    } catch e {
+      Debug.print("Error fetching full mapping: " # e.message());
+      return ();
+    };
+  };
+
   func knownCanistersToMapping() : Mapping.Mapping {
     let result = List.empty<(CanisterKind.CanisterKind, [(Nat, Principal)])>();
 
@@ -112,6 +93,31 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
     };
 
     { version = currentVersion; canisters = result.toArray() }
+  };
+
+    // === Permissions ===
+
+  func isKnownBasic(caller: Principal) : Bool {
+    memKnownCanisters.containsKey(caller) or caller.isController();
+  };
+
+  func isKnown(caller: Principal) : async Bool {
+    if ( isKnownBasic(caller) ) return true;
+    
+    if ( lastVersionMaj < Time.now() - STALE_MAPPING_THRESHOLD ) return false;
+
+    await getAndSaveMapping();
+
+    true;
+  };
+
+  func isInRange(key: Text) : Bool {
+    let keyHash = hashText(key);
+
+    let ?map = memMapping.get(selfKind) else return false;
+    let ?entry = map.get(keyHash) else return false;
+    
+    entry == self
   };
 
   // === Find canister ===
@@ -141,6 +147,13 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
   func createActorSearchIndexFor(text: Text) : ?ActorSearchIndex {
     let ?principal = findCanisterFromText(#dynamic(#search(#searchIndex)), text) else return null;
     ?(actor(principal.toText()) : ActorSearchIndex)
+  };
+
+  func getAdmin() : ?Principal {
+    let ?admin = memMapping.get(#static(#admin)) else return null;
+    let ?adminPrincipal = admin.get(0) else return null;
+
+    ?adminPrincipal
   };
 
   // ===== INIT =====

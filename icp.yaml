@@ -1,20 +1,31 @@
 canisters:
-  - name: admin
+  # Canisters which needs to be deployed
+  - name: Admin
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 
-  - name: indexMain
+  - name: Factory
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 
-  - name: SearchUsersByName
+  - name: RegistryIndexes
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 
-  - name: SearchUsersByEmail
+  # Canisters dynamically created
+  - name: IndexMain
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 
+  - name: SearchIndexes
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+
+  - name: BucketUsers
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+
+  # Frontend asset canister
   - name: frontend
     recipe:
       type: "@dfinity/asset-canister@v2.2.0"

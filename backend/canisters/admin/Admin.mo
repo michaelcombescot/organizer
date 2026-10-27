@@ -3,12 +3,18 @@ import Blob "mo:core/Blob";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
+import Timer "mo:core/Timer";
 import Errors "../../shared/Errors";
 import { ic } "mo:ic";
 import { StaticKind } "../../shared/Canisters";
+import ModTopUpCycles "ModTopUpCycles";
 
 shared ({ caller }) actor class Admin() = this {
   include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#admin); mapping = { version = 0; canisters = [] } });
+
+  // ===== CONFIGS =====
+
+  let MAINTENANCE_TIMER = #hours(12);
 
   // ===== SYSTEM =====
 
@@ -35,6 +41,13 @@ shared ({ caller }) actor class Admin() = this {
     #ok
   };
 
+  // ===== JOBS =====
+
+  ignore Timer.recurringTimer<system>(MAINTENANCE_TIMER, func () : async () {
+    await getAndSaveMapping();
+    await ModTopUpCycles.topUpCanisters(memMapping);
+  });
+
   // ===== HANDLERS =====
 
   public shared ({ caller }) func handlerUpgradeCanisterKind(canisterId: Principal, wasmModule: Blob.Blob) : async Result.Result<(), Errors.HandlerErr> {
@@ -53,4 +66,4 @@ shared ({ caller }) actor class Admin() = this {
       #err(#errInterCanisterCall("Cannot upgrade canister with canisterId " # canisterId.toText() # ", error: " # e.message() ))
     }
   };
-};
+}

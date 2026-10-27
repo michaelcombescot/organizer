@@ -119,21 +119,32 @@ shared ({ caller = owner }) actor class Factory() = this {
     // 1. CREATE THE CANISTER
     let nbCycles = confGetNewCanisterNbCycles(kind);
 
+    let ?adminPrincipal = getAdmin() else return #err(#errSystem("Admin principal not found"));
+
+    let settings = #new {
+      settings = ?{
+        controllers = ?[thisPrincipal, adminPrincipal];
+        compute_allocation = null; // reserve a percentage of execution on the network
+        memory_allocation = null; // preallocate memory for the canister
+        freezing_threshold = null; // time vefore canister is deleted if no cycles, default = 2_592_000 (30 days in seconds)
+      }
+    };
+
     let newPrincipal = try {
       switch (kind) {
         case (#index(i)) {
           switch (i) {
-            case (#indexMain) Principal.fromActor(await (with cycles = nbCycles) IndexMain.IndexMain(knownCanistersToMapping()));
+            case (#indexMain) Principal.fromActor(await (with cycles = nbCycles) (system IndexMain.IndexMain)(settings)(knownCanistersToMapping()));
           };
         } 
         case (#search(s)) {
           switch (s) {
-            case (#searchIndex) Principal.fromActor(await (with cycles = nbCycles) SearchIndexes.SearchIndexes(knownCanistersToMapping()));
+            case (#searchIndex) Principal.fromActor(await (with cycles = nbCycles) (system SearchIndexes.SearchIndexes)(settings)(knownCanistersToMapping()));
           };
         };
         case (#bucket(b)) {
           switch (b) {
-            case (#bucketUsers) Principal.fromActor(await (with cycles = nbCycles) BucketUsers.BucketUsers(knownCanistersToMapping()));
+            case (#bucketUsers) Principal.fromActor(await (with cycles = nbCycles) (system BucketUsers.BucketUsers)(settings)(knownCanistersToMapping()));
           };
         };
       };
