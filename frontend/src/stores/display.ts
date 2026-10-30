@@ -1,28 +1,22 @@
-import { defineStore } from "pinia";
-import { ref, shallowRef, type Component } from "vue";
+import type { ComponentChildren } from "preact";
+import { signal } from "@preact/signals";
+import { useDeepSignal } from 'deepsignal';
 
-export const useModalStore = defineStore('modal', () => {
-  const visible = ref(false)
-  const content = shallowRef<Component | null>(null)
+// MODAL
 
-  function openModal(c: Component) {
-    content.value = c
-    visible.value = true
-  }
+export let stateModal = useDeepSignal({
+  visible: false,
+  content: null as ComponentChildren,
+});
 
-  function closeModal() {
-    visible.value = false
-    content.value = null
-  }
-  
-  return { visible, content, openModal, closeModal }
-})
+// SIDEBAR
 
-export const useSidebarStore = defineStore('sidebar', () => {
-  const visible = ref(false)
+export let stateSidebar = signal(false);
 
-  function openSidebar() { visible.value = true }
-  function closeSidebar() { visible.value = false }
+// FLASHES
 
-  return { visible, openSidebar, closeSidebar }
-})
+export let stateFlash = useDeepSignal({
+  flashInfo: "",
+  flashError: "",
+  flashWarning: "",
+});

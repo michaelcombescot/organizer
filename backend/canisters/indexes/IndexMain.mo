@@ -4,14 +4,14 @@ import Hash "../../shared/Hash";
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
-import { CanisterKind; Mapping } "../../shared/Canisters";
+import Canisters "../../shared/Canisters";
 import { type Result } "mo:core/Result";
 import { type HandlerErr } "../../shared/Errors";
 
-shared ({ caller }) actor class IndexMain(mapping: Mapping.Mapping) = this {
+shared ({ caller }) actor class IndexMain(mapping: Canisters.Mapping) = this {
   let self = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = self; selfKind = #dynamic(#index(#indexMain)); mapping = mapping });
+  include MixinCanistersMapping({ self = self; selfKind = #dynamic(#orderedByTime(#indexMain)); mapping = mapping });
 
   // ===== SYSTEM =====
 
@@ -20,7 +20,7 @@ shared ({ caller }) actor class IndexMain(mapping: Mapping.Mapping) = this {
       caller : Principal;
       msg : {
         #handlerGetCurrentUserBucket : () -> ();
-      };
+      } or InspectMapping;
   };
 
   system func inspect(params: InspectParams) : Bool {
@@ -34,7 +34,7 @@ shared ({ caller }) actor class IndexMain(mapping: Mapping.Mapping) = this {
   // ===== HANDLERS =====
 
   public query ({ caller }) func handlerGetCurrentUserBucket() : async Result<Principal, HandlerErr> {
-    let ?map = memMapping.get(#dynamic(#bucket(#bucketUsers))) else return #err(#errNotFound);
+    let ?map = memMapping.get(#dynamic(#orderedByHash(#bucketUsers))) else return #err(#errNotFound);
     let ?principal = map.get(Hash.hashText(caller.toText())) else return #err(#errNotFound);
     #ok(principal);
   };

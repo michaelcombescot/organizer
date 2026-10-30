@@ -2,7 +2,7 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Map "mo:core/Map";
-import { CanisterKind } "../../shared/Canisters";
+import Canisters "../../shared/Canisters";
 import Errors "../../shared/Errors";
 import { ic } "mo:ic";
 
@@ -15,6 +15,9 @@ module {
   let TOPPING_LIMIT_FACTORY = 1_000_000_000_000;
   let TOPPING_AMOUNT_FACTORY = 1_000_000_000_000;
 
+  let TOPPING_LIMIT_INDEX_MAIN = 1_000_000_000_000;
+  let TOPPING_AMOUNT_INDEX_MAIN = 1_000_000_000_000;
+
   let TOPPING_LIMIT_SEARCH_INDEX = 1_000_000_000_000;
   let TOPPING_AMOUNT_SEARCH_INDEX = 1_000_000_000_000;
 
@@ -23,7 +26,7 @@ module {
 
   // ===== HELPERS =====
 
-  public func topUpCanister(kind: CanisterKind.CanisterKind, canisterId: Principal) : async Result.Result<(), Errors.HandlerErr> {
+  public func topUpCanister(kind: Canisters.CanisterKind, canisterId: Principal) : async Result.Result<(), Errors.HandlerErr> {
     let status =try {
       await ic.canister_status({ canister_id = canisterId; })
     } catch (e) {
@@ -40,9 +43,17 @@ module {
       };
       case (#dynamic(d)) {
         switch (d) {
-          case (#index(_)) (TOPPING_AMOUNT_SEARCH_INDEX, TOPPING_LIMIT_SEARCH_INDEX);
-          case (#bucket(_)) (TOPPING_AMOUNT_BUCKETS, TOPPING_LIMIT_BUCKETS);
-          case (#search(_)) (TOPPING_AMOUNT_SEARCH_INDEX, TOPPING_LIMIT_SEARCH_INDEX);
+          case (#orderedByHash(h)) {
+            switch (h) {
+              case (#bucketUsers) (TOPPING_AMOUNT_BUCKETS, TOPPING_LIMIT_BUCKETS);
+              case (#searchIndexes) (TOPPING_AMOUNT_SEARCH_INDEX, TOPPING_LIMIT_SEARCH_INDEX);
+            };
+          };
+          case (#orderedByTime(s)) {
+            switch (s) {
+              case (#indexMain) (TOPPING_AMOUNT_INDEX_MAIN, TOPPING_LIMIT_INDEX_MAIN);
+            };
+          }
         };
       }
     };
@@ -58,7 +69,7 @@ module {
     #ok(());
   };
 
-  public func topUpCanisters(mapping: Map.Map<CanisterKind.CanisterKind, Map.Map<Nat, Principal>>) : async () {
+  public func topUpCanisters(mapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>>) : async () {
     for ( (kind, map) in mapping.entries() ) {
       for ( (index, principal) in map.entries() ) {
         ignore await topUpCanister(kind, principal);

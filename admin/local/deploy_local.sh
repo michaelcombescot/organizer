@@ -12,59 +12,69 @@
 # icp identity new local --storage plaintext
 
 # ===== CREATE STATIC CANISTERS =====
-icp deploy Admin -e local --identity local
-icp deploy Factory -e local --identity local
-icp deploy RegistryIndexes -e local --identity local
+
+echo "===== CREATE STATIC CANISTERS ====="
+CURRENT_ID=$(icp identity principal --identity local)
+
+# create the admin canister first
+icp deploy Admin -e local --identity local --controller $CURRENT_ID --cycles 2_000_000_000_000
 
 ADMIN_ID=$(icp canister status Admin -e local --id-only)
+
+# then the factory canister
+icp deploy Factory -e local --identity local --controller $CURRENT_ID --controller $ADMIN_ID --cycles 20_000_000_000_000
+
 FACTORY_ID=$(icp canister status Factory -e local --id-only)
+
+# then the registryIndexes canister
+icp deploy RegistryIndexes -e local --identity local --controller $CURRENT_ID --controller $ADMIN_ID --cycles 2_000_000_000_000
+
 REGISTRY_INDEXES_ID=$(icp canister status RegistryIndexes -e local --id-only)
 
-echo "_________________________"
+echo "===== STATIC CANISTERS DEPLOYED ====="
+
+# ===== UPDATE FACTORY MAPPING =====
+# The factory is the garant of the application full canister mapping.
+# It will be interogated by everyone, admin included, to retrieve the full mapping of canisters.
+
+echo " ===== MAKE FACTORY KNOW EVERYONE ====="
+
+icp canister call Factory systemAddStaticCanisters \
+  '(vec { record { variant { admin } ; principal "'"$ADMIN_ID"'" } })' \
+  -e local \
+  --identity local
 
 
-icp canister call Admin systemAddStaticCanisters \
-  '(vec { record { variant { factory } ; principal "'"$FACTORY_ID"'" } })' \
-  -e local --identity local
-
-icp canister call Admin systemAddStaticCanisters \
+icp canister call Factory systemAddStaticCanisters \
   '(vec { record { variant { registryIndexes } ; principal "'"$REGISTRY_INDEXES_ID"'" } })' \
-  -e local --identity local
+  -e local \
+  --identity local
 
-echo "--------------------------"
+echo "===== FACTORY MAPPING UPDATED ====="
 
-# ===== CREATE A SINGLE INDEX TO BEGIN WITH =====
+# ===== CREATE BUCKETS =====
+# for the application to work, we need to have at least one IndexMain, one SearchIndexes, and one BucketUsers
 
-# icp canister call $FACTORY_ID createIndex '(record { name = "IndexMain" })' -e local
+echo "===== CREATE BUCKETS ====="
 
-# icp deploy IndexMain -e local
-# INDEX_MAIN_ID=$(icp canister id IndexMain)
+echo "--- Create IndexMain"
+icp canister call Factory handlerCreateOrderedByTimeCanister \
+  '(variant { indexMain })' \
+  -e local \
+  --identity local
 
-# ===== CREATE A SINGLE SEARCHINDEXES =====
+echo "--- Create SearchIndexes"
+icp canister call Factory handlerCreateOrderedByHashCanister \
+  '(variant { searchIndexes } , 0 )' \
+  -e local \
+  --identity local
 
-# icp deploy SearchIndexes -e local
-# SEARCH_INDEXES_ID=$(icp canister id SearchIndexes)
+echo "--- Create BucketUsers"
+icp canister call Factory handlerCreateOrderedByHashCanister \
+  '(variant { bucketUsers } , 0)' \
+  -e local \
+  --identity local
 
-# # then we do a call to add the registry to the coordinator
-# # for information, synthax if the param is a record is: (record { todosRegistryPrincipal = principal \"$(dfx canister id organizerTodosRegistry)\" })
-# dfx deploy coordinator \
-#   --argument "(principal \"$(dfx canister id registryIndexes)\")"
+echo "===== BUCKETS CREATED ====="
 
-# dfx generate coordinator
-# dfx ledger fabricate-cycles --canister coordinator # add cycles to the coordinator, will be needed to create indexes and buckets
-
-# # then we generate all necessary code for the dynamically created canisters
-# dfx generate indexMain
-
-# dfx generate bucketGroups
-# dfx generate bucketUsers
-
-# # deploy internet identity
-# dfx deploy internet_identity
-# dfx generate internet_identity
-
-# # deploy frontend
-# # dfx deploy organizerFrontend
-
-# # create a first set of indexes
-# dfx canister call coordinator handlerAddIndex '(variant { indexMain })'
+echo "===== DEPLOYMENT COMPLETE ====="

@@ -50,15 +50,14 @@ The only thing is, buckets need to know all workers at any time, so how ?
 
 ##### REFLEXION
 
-Ok alors => créer les scripts top up/ verif mémoire / split
-_____
-trouver comment proprement router la création d'un nouvel objet (probalement un text avec bucket-id puis hash ?)
-=> créer un objet avec un id => bucket + id ? uuid directement ? si uuid => hash => direct bucket, nécessite du split, chiant.
-=> garder un bucket actif par index => super simple
+Comment gérer le split:
+- statut dans le canister (pas de création)
+- entrypoint: get data
+- entrypoint delete data
+- mixin split avec 3 méthodes publiques: 
+  - start split (stop creation)
+  - get split data (from controller)
+  - save split data
+  - confirm data transfered (delete)
+  - stop split (reallow creation)
 
-Du coup autre problème, est ce que je stocke les buckets par index ?, ou juste un index et un id ?
-- imagininons, j'ai 2 indexes, chaque index à un bucket courant d'un type spécifique => nop, force à synchro, c'est non
-- ok j'ai 2 indexes, a la création d'un bucket je lance directement de la comm inter bucket ?
-_____
-trouver comment split l'update des buckets de recherche quand besoin (par ex, update user, name => index bucket A, email => index bucket B)
-=> super simple update local, appel await //, rollback des données pour lesquels ça a fail, garder celle pour lesquelles ça a réussi

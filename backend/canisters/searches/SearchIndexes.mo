@@ -7,16 +7,15 @@ import Iter "mo:core/Iter";
 import Result "mo:core/Result";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import { type HandlerErr } "../../shared/Errors";
-import { CanisterKind = { type CanisterKind } } "../../shared/Canisters";
-import { Mapping } "../../shared/Canisters";
+import Canisters "../../shared/Canisters";
 import { ReqKind } "../../shared/Req";
 import Loc "../../shared/Loc";
 import Errors "../../shared/Errors";
 
-shared ({ caller }) actor class SearchIndexes(mapping: Mapping.Mapping) = this {
+shared ({ caller }) actor class SearchIndexes(mapping: Canisters.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#search(#searchIndex)); mapping = mapping });
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#orderedByHash(#searchIndexes)); mapping = mapping });
 
   // ===== MEMORY =====
 
@@ -31,7 +30,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: Mapping.Mapping) = this {
       #handlerPublicSearch : () -> { requests: [(ReqKind.ReqKind, Text)]; limit: Nat };
       #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text};
       #handlerLiberateEntry : () -> { kind: ReqKind.ReqKind; key: Text };
-    }
+    } or InspectMapping;
   };
 
   system func inspect(params: inspectParams) : Bool {

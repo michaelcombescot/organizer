@@ -1,5 +1,5 @@
 import { AuthClient } from "@icp-sdk/auth/client";
-import { ref } from "vue";
+import { signal } from "@preact/signals";
 
 function getIdentityProviderUrl() {
   const host = window.location.hostname;
@@ -18,12 +18,12 @@ export const STATE_AUTH_CLIENT = new AuthClient({
 export let STATE_IDENTITY = await STATE_AUTH_CLIENT.getIdentity();
 
 export let STATE_PRINCIPAL = "";
-export const authenticated = ref(STATE_AUTH_CLIENT.isAuthenticated());
+export const authenticated = signal(STATE_AUTH_CLIENT.isAuthenticated());
 
 export async function changeStateAuthenticated() {
     STATE_PRINCIPAL = (await STATE_AUTH_CLIENT.getIdentity()).getPrincipal().toString();
     STATE_IDENTITY = await STATE_AUTH_CLIENT.getIdentity();
-  authenticated.value = STATE_AUTH_CLIENT.isAuthenticated();
+  authenticated.value = await STATE_AUTH_CLIENT.isAuthenticated();
 }
 
 

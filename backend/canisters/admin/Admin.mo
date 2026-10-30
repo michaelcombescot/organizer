@@ -6,7 +6,7 @@ import Error "mo:core/Error";
 import Timer "mo:core/Timer";
 import Errors "../../shared/Errors";
 import { ic } "mo:ic";
-import { StaticKind } "../../shared/Canisters";
+import Canisters "../../shared/Canisters";
 import ModTopUpCycles "ModTopUpCycles";
 
 shared ({ caller }) actor class Admin() = this {
@@ -22,10 +22,10 @@ shared ({ caller }) actor class Admin() = this {
     arg : Blob;
     caller : Principal;
     msg : {
-      #systemAddStaticCanisters : () -> (canisters: [(StaticKind.StaticKind, Principal)]);
+      #systemAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
 
       #handlerUpgradeCanisterKind : () -> (canisterId: Principal, wasmModule: Blob.Blob);
-    };
+    } or InspectMapping;
   };
 
   system func inspect(params: inspectParams) : Bool {
@@ -34,7 +34,7 @@ shared ({ caller }) actor class Admin() = this {
     true
   };
 
-  public shared ({ caller }) func systemAddStaticCanisters(canisters: [(StaticKind.StaticKind, Principal)]) : async Result.Result<(), Errors.HandlerErr> {
+  public shared ({ caller }) func systemAddStaticCanisters(canisters: [(Canisters.StaticKind, Principal)]) : async Result.Result<(), Errors.HandlerErr> {
     if ( not isKnownBasic(caller) ) return #err(#errForbidden);
 
     addStaticCanisters(canisters);

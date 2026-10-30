@@ -9,16 +9,15 @@ import User "../../models/User";
 import { type User; type PublicUser } "../../models/User";
 import Errors "../../shared/Errors";
 import Loc "../../shared/Loc";
-import { CanisterKind } "../../shared/Canisters";
+import Canisters "../../shared/Canisters";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
-import { Mapping } "../../shared/Canisters";
 import { type Job } "../../models/Job";
 
-shared ({ caller }) actor class BucketUsers(mapping: Mapping.Mapping) = this {
+shared ({ caller }) actor class BucketUsers(mapping: Canisters.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
   let thisHash = thisPrincipal.hash().toNat();
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#bucket(#bucketUsers)); mapping = mapping });
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#orderedByHash(#bucketUsers)); mapping = mapping });
   
   // ===== CONFIGS =====
 
@@ -37,9 +36,9 @@ shared ({ caller }) actor class BucketUsers(mapping: Mapping.Mapping) = this {
       #handlerCreateUser : () -> ();
       #handlerDeleteUser : () -> ();
       #handlerGetUserData : () -> ();
-      #handlerUpdateMapping : () -> (canisters : [(CanisterKind.CanisterKind, [(Nat, Principal)])]);
+      #handlerUpdateMapping : () -> (canisters : [(Canisters.CanisterKind, [(Nat, Principal)])]);
       #handlerUpdateUser : () -> {email : Text; name : Text; }
-    };
+    } or InspectMapping;
   };
 
   system func inspect(params: InspectParams) : Bool {
@@ -63,7 +62,7 @@ shared ({ caller }) actor class BucketUsers(mapping: Mapping.Mapping) = this {
 
     if ( memUsers.containsKey(caller) ) return #err(#errValidation([#alreadyExists { field = "caller" }]));
 
-    let ?indexPrincipal = createActorSearchIndexFor(caller.toText()) else return #err(#errNotFound);
+    let ?indexPrincipal = createActorSearchIndexesFor(caller.toText()) else return #err(#errNotFound);
 
     let user: User = {
       data = { name = ""; email = "" };

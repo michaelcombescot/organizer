@@ -3,30 +3,37 @@ import Nat "mo:core/Nat";
 import Error "mo:core/Error";
 import { hashText } "../Hash";
 import Principal "mo:core/Principal";
-import { CanisterKind; Mapping; StaticKind } "../Canisters";
+import Canisters "../Canisters";
 import { type Result } "mo:core/Result";
 import Iter "mo:core/Iter";
 import List "mo:core/List";
 import Time "mo:core/Time";
 import Debug "mo:core/Debug";
+import Result "mo:core/Result";
 import { type HandlerErr } "../Errors";
-import { type ActorSearchIndex; type ActorFactory; } "../Interfaces";
+import { type ActorSearchIndexes; type ActorFactory; } "../Interfaces";
 
-mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.Mapping }) {
+mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.Mapping }) {
   // ===== CONFIGS =====
 
   let STALE_MAPPING_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
+
+  // ===== TYPES =====
+
+  type InspectMapping = {
+    #handlerUpdateMapping : () -> ();
+  };
 
   // ===== MEMORY =====
 
   var lastVersionMaj : Time.Time = Time.now();
   var currentVersion = 0;
   let memKnownCanisters = Map.empty<Principal, ()>();
-  let memMapping = Map.empty<CanisterKind.CanisterKind, Map.Map<Nat, Principal>>();
+  let memMapping = Map.empty<Canisters.CanisterKind, Map.Map<Nat, Principal>>();
 
   // === Save and format Canisters memory ===
 
-  func addStaticCanisters(canisters: [(StaticKind.StaticKind, Principal)]) : () {
+  func addStaticCanisters(canisters: [(Canisters.StaticKind, Principal)]) : () {
     for ((kind, principal) in canisters.values()) {
       let map = switch ( memMapping.get(#static(kind)) ) {
         case null {
@@ -42,7 +49,7 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
     };
   };
 
-  func saveMapping(mapping: Mapping.Mapping) : () {
+  func saveMapping(mapping: Canisters.Mapping) : () {
     for ( (kind, principals) in mapping.canisters.values() ) {
       let map = switch ( memMapping.get(kind) ) {
         case null {
@@ -85,8 +92,8 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
     };
   };
 
-  func knownCanistersToMapping() : Mapping.Mapping {
-    let result = List.empty<(CanisterKind.CanisterKind, [(Nat, Principal)])>();
+    func knownCanistersToMapping() : Canisters.Mapping {
+    let result = List.empty<(Canisters.CanisterKind, [(Nat, Principal)])>();
 
     for ( (kind, map) in memMapping.entries() ) {
       result.add((kind, (map.entries().toArray())));
@@ -122,7 +129,7 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
 
   // === Find canister ===
 
-  func findCanisterFromText(kind: CanisterKind.CanisterKind, text: Text) : ?Principal {
+  func findCanisterFromText(kind: Canisters.CanisterKind, text: Text) : ?Principal {
     let ?map = memMapping.get(kind) else return null;
 
     let index = hashText(text) % map.size();
@@ -133,7 +140,7 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
     }
   };
 
-  func findCanisterFromIndex(kind: CanisterKind.CanisterKind, index: Nat) : ?Principal {
+  func findCanisterFromIndex(kind: Canisters.CanisterKind, index: Nat) : ?Principal {
     let ?map = memMapping.get(kind) else return null;
 
     let idx = index % map.size();
@@ -144,9 +151,9 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
     }
   };
 
-  func createActorSearchIndexFor(text: Text) : ?ActorSearchIndex {
-    let ?principal = findCanisterFromText(#dynamic(#search(#searchIndex)), text) else return null;
-    ?(actor(principal.toText()) : ActorSearchIndex)
+  func createActorSearchIndexesFor(text: Text) : ?ActorSearchIndexes {
+    let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#searchIndexes)), text) else return null;
+    ?(actor(principal.toText()) : ActorSearchIndexes)
   };
 
   func getAdmin() : ?Principal {
@@ -159,4 +166,16 @@ mixin ({ self: Principal; selfKind: CanisterKind.CanisterKind; mapping: Mapping.
   // ===== INIT =====
 
   if (memKnownCanisters.size() == 0) saveMapping(mapping);
+
+  // ===== API =====
+
+  public shared ({caller}) func handlerUpdateMapping() : async Result.Result<(), HandlerErr> {
+    if ( not isKnownBasic(caller) ) return #err(#errForbidden);
+
+    Debug.print("Handler update mapping called by: " # caller.toText());
+
+    await getAndSaveMapping();
+
+    #ok
+  };
 }

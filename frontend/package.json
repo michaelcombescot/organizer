@@ -6,43 +6,29 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "vue-tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@icp-sdk/auth": "^7.1.0",
     "@icp-sdk/core": "~5.2.0",
-    "@popperjs/core": "^2.11.8",
-    "@tailwindcss/vite": "^4.3.3",
-    "pinia": "^4.0.3",
-    "tailwindcss": "^4.3.3",
-    "vue": "^3.5.42",
-    "vue-router": "^5.3.0"
+    "@preact/signals": "^2.3.1",
+    "dayjs": "^1.11.13",
+    "deepsignal": "^1.6.0",
+    "preact": "^10.27.2",
+    "preact-router": "^4.1.2"
   },
   "devDependencies": {
-    "dependencies": {
-    "@dfinity/agent": "^3.0.0",
-    "@dfinity/auth-client": "^3.0.0",
-    "@dfinity/candid": "^3.0.0",
-    "@dfinity/identity": "^3.0.0",
-    "@dfinity/principal": "^3.0.0",
-    "borc": "^3.0.0",
-    "cbor": "^10.0.9",
-    "dayjs": "^1.11.13",
-    "simple": "^0.2.0",
-    "simple-cbor": "^0.4.1",
     "@eslint/js": "~9.33.0",
-    "@icp-sdk/bindgen": "^0.4.0",
+    "@preact/preset-vite": "^2.10.2",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.1",
-    "@vitejs/plugin-vue": "^6.0.8",
-    "dayjs": "^1.11.13",
     "eslint": "~9.33.0",
-    "eslint-plugin-vue": "^10.10.0",
     "globals": "~16.3.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "~5.8.3",
     "typescript-eslint": "~8.39.1",
-    "vite": "~8.2.2",
-    "vue-tsc": "^3.3.11"
+    "vite": "~8.2.2"
   }
 }

@@ -4,10 +4,10 @@ import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import Errors "../../shared/Errors";
 import Result "mo:core/Result";
-import { CanisterKind; IndexKind; StaticKind } "../../shared/Canisters";
+import Canisters "../../shared/Canisters";
 
 shared ({ caller }) actor class RegistryIndexes() = this {
-  include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#registryIndexes); mapping = { version = 0; canisters = [] } });
+  include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#registryIndexes); mapping = { version = 0; canisters = [] } : Canisters.Mapping });
 
   // ===== SYSTEM =====
 
@@ -15,9 +15,9 @@ shared ({ caller }) actor class RegistryIndexes() = this {
     arg : Blob;
     caller : Principal;
     msg : {
-      #systemAddStaticCanisters : () -> (canisters: [(StaticKind.StaticKind, Principal)]);
-      #handlerGetIndexes : () -> (kind: IndexKind.IndexKind);
-    }
+      #systemAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
+      #handlerGetMainIndexes : () -> ();
+    } or InspectMapping;
   };
 
   system func inspect(params: inspectParams) : Bool {
@@ -27,7 +27,7 @@ shared ({ caller }) actor class RegistryIndexes() = this {
     true
   };
 
-  public shared ({ caller }) func systemAddStaticCanisters(canisters: [(StaticKind.StaticKind, Principal)]) : async Result.Result<(), Errors.HandlerErr> {
+  public shared ({ caller }) func systemAddStaticCanisters(canisters: [(Canisters.StaticKind, Principal)]) : async Result.Result<(), Errors.HandlerErr> {
     if ( not isKnownBasic(caller) ) return #err(#errForbidden);
 
     addStaticCanisters(canisters);
@@ -36,10 +36,10 @@ shared ({ caller }) actor class RegistryIndexes() = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller}) func handlerGetIndexes(kind: IndexKind.IndexKind) : async [Principal] {
+  public query ({ caller}) func handlerGetMainIndexes() : async [Principal] {
     if ( caller.isAnonymous() ) return [];
 
-    let ?map = memMapping.get(#dynamic(#index(kind))) else return [];
+    let ?map = memMapping.get(#dynamic(#orderedByTime(#indexMain))) else return [];
 
     map.values().toArray()
   };
