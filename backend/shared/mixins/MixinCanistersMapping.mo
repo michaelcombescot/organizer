@@ -17,6 +17,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
   // ===== CONFIGS =====
 
   let STALE_MAPPING_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
+  let MAX_MAPPING_INDEXES : Nat = 1_000_000_000; // Maximum number of indexes per canister kind
 
   // ===== TYPES =====
 
@@ -136,7 +137,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
   func findCanisterFromText(kind: Canisters.CanisterKind, text: Text) : ?Principal {
     let ?map = memMapping.get(kind) else return null;
 
-    let index = hashText(text) % map.size();
+    let index = hashText(text) % MAX_MAPPING_INDEXES;
 
     switch ( map.reverseEntriesFrom(index).next() ) {
       case (?entry) ?entry.1;
@@ -147,7 +148,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
   func findCanisterFromIndex(kind: Canisters.CanisterKind, index: Nat) : ?Principal {
     let ?map = memMapping.get(kind) else return null;
 
-    let idx = index % map.size();
+    let idx = index % MAX_MAPPING_INDEXES;
 
     switch ( map.reverseEntriesFrom(idx).next() ) {
       case (?entry) ?entry.1;
