@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
+import { icpBindgen } from "@icp-sdk/bindgen/plugins/vite";
 import { execSync } from "child_process";
 
 const environment = process.env.ICP_ENVIRONMENT || "local";
@@ -30,6 +31,13 @@ function getDevServerConfig() {
 }
 
 export default defineConfig(({ command }) => ({
-  plugins: [preact(), tailwindcss()],
+  plugins: [
+    preact(),
+    tailwindcss(),
+    icpBindgen({
+      didFile: "../.mops/.build/RegistryIndexes.did",
+      outDir: "./src/backend/api",
+    }),
+  ],
   ...(command === "serve" ? { server: getDevServerConfig() } : {}),
 }));

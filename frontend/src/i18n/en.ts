@@ -1,4 +1,3 @@
-import { Kind, Priority, Status } from "../backend/api/backend";
 import type { Language } from "./language";
 
 export const ENGLISH: Language = {
@@ -15,47 +14,47 @@ export const ENGLISH: Language = {
     homeSidebarTitleGroups: "Groups",
     homeSidebarSelectGroupsAll: "All groups",
 
-    // ===== GROUPS =====
-    groupDeleteConfirm: (name: string) => 
-      `Are you sure you want to delete '${name}'? \nThis action cannot be undone`,
+    // // ===== GROUPS =====
+    // groupDeleteConfirm: (name: string) => 
+    //   `Are you sure you want to delete '${name}'? \nThis action cannot be undone`,
 
-    groupFormNewTitle: "New group",
-    groupFormEditTitle: "Edit Group",
-    groupFormNameLabel: "Name",
-    groupFormKindLabel: "Kind",
-    groupFormColorLabel: "Color",
+    // groupFormNewTitle: "New group",
+    // groupFormEditTitle: "Edit Group",
+    // groupFormNameLabel: "Name",
+    // groupFormKindLabel: "Kind",
+    // groupFormColorLabel: "Color",
 
-    groupAddUserFormTitle: (name: string) => 
-      `Add user to '${name}'`,
-    groupAddUserFormSearchBy: "Search by",
-    groupAddUserFormSearchValue: "Search value",
+    // groupAddUserFormTitle: (name: string) => 
+    //   `Add user to '${name}'`,
+    // groupAddUserFormSearchBy: "Search by",
+    // groupAddUserFormSearchValue: "Search value",
 
-    groupKind: {
-        [Kind.collective]: "Collective",
-        [Kind.personnal]: "Personal",
-    },
+    // groupKind: {
+    //     [Kind.collective]: "Collective",
+    //     [Kind.personnal]: "Personal",
+    // },
 
-    // ===== TODOS =====
-    todoFormNewTitle: "New todo",
-    todoFormEditTitle: "Edit Todo",
-    todoFormGroupLabel: "Group",
-    todoFormGroupNoneSelected: "No group",
-    todoFormTitleLabel: "Title",
-    todoFormDescriptionLabel: "Description",
-    todoFormScheduledDateLabel: "Scheduled date",
-    todoFormPriorityLabel: "Priority",
-    todoFormStatusLabel: "Status",
+    // // ===== TODOS =====
+    // todoFormNewTitle: "New todo",
+    // todoFormEditTitle: "Edit Todo",
+    // todoFormGroupLabel: "Group",
+    // todoFormGroupNoneSelected: "No group",
+    // todoFormTitleLabel: "Title",
+    // todoFormDescriptionLabel: "Description",
+    // todoFormScheduledDateLabel: "Scheduled date",
+    // todoFormPriorityLabel: "Priority",
+    // todoFormStatusLabel: "Status",
 
-    todoPriority: {
-        [Priority.low]: "Low",
-        [Priority.medium]: "Medium",
-        [Priority.high]: "High",
-      },
-    todoStatus: {
-        [Status.todo]: "To Do",
-        [Status.inProgress]: "In Progress",
-        [Status.done]: "Done",
-      },
+    // todoPriority: {
+    //     [Priority.low]: "Low",
+    //     [Priority.medium]: "Medium",
+    //     [Priority.high]: "High",
+    //   },
+    // todoStatus: {
+    //     [Status.todo]: "To Do",
+    //     [Status.inProgress]: "In Progress",
+    //     [Status.done]: "Done",
+    //   },
 
     // ===== FORM =====
     formSubmit: "Submit",

@@ -1,7 +1,16 @@
 import { stateSidebar } from "../../../states/display";
 
 export default function Sidebar() {
-  if (!stateSidebar.value) return <></>
+  if (!stateSidebar.value) return (
+    <>
+      <img
+        class="fixed top-2 left-2 h-6 w-6"
+        src="/menu.svg"
+        alt="Open menu"
+        onClick={() => stateSidebar.value = true}
+      />
+    </>
+  );
 
   return (
     <>

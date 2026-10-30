@@ -1,8 +1,7 @@
-import { createActor } from "../api/backend";
+import { createActor } from "../api/RegistryIndexes";
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
-import { STATE_IDENTITY } from "../../states/auth";
+import { stateIdentity } from "../../states/auth";
 
-// Name of the canister in icp.yaml, read from the `ic_env` cookie
 const CANISTER_NAME = "RegistryIndexes";
 
 export async function actorBackend() {
@@ -14,7 +13,7 @@ export async function actorBackend() {
 
   return createActor(canisterId, {
     agentOptions: {
-      identity: STATE_IDENTITY,
+      identity: stateIdentity.value,
       rootKey: !import.meta.env.DEV ? canisterEnv.IC_ROOT_KEY : undefined,
       shouldFetchRootKey: import.meta.env.DEV,
     },
