@@ -35,7 +35,7 @@ shared ({ caller = owner }) actor class Factory() = this {
 
   // ===== MEMORY =====
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #static(#factory); mapping = { version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] } });
+  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #static(#factory); mapping = ?{ version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] } });
 
   // ===== SYSTEM =====
 
@@ -77,7 +77,7 @@ shared ({ caller = owner }) actor class Factory() = this {
 
     let settings = #new {
       settings = ?{
-        controllers = ?[thisPrincipal, adminPrincipal];
+        controllers = ?[owner, thisPrincipal, adminPrincipal];
         compute_allocation = null; // reserve a percentage of execution on the network
         memory_allocation = null; // preallocate memory for the canister
         freezing_threshold = null; // time vefore canister is deleted if no cycles, default = 2_592_000 (30 days in seconds)
@@ -141,12 +141,6 @@ shared ({ caller = owner }) actor class Factory() = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<{ version: Nat; canisters: [(Canisters.CanisterKind, [(Nat, Principal)])] }, Errors.HandlerErr> {
-    if ( not (isKnownBasic(caller)) ) return #err(#errForbidden);
-
-    #ok({ version = currentVersion; canisters = knownCanistersToMapping().canisters })
-  };
-
   public shared ({ caller }) func handlerCreateOrderedByTimeCanister(kind: Canisters.OrderedByTimeKind) : async Result.Result<Principal, Errors.HandlerErr> {
     if ( not isKnownBasic(caller) ) return #err(#errForbidden);
 
@@ -167,14 +161,24 @@ shared ({ caller = owner }) actor class Factory() = this {
   public shared ({ caller }) func handlerCreateOrderedByHashCanister(kind: Canisters.OrderedByHashKind, index: Nat) : async Result.Result<Principal, Errors.HandlerErr> {
     if ( not caller.isController() ) return #err(#errForbidden);
 
-    // 1. CREATE THE CANISTER
+    // 1. VALIDATE INPUT
+    if (index < 0) return #err(#errBadRequest("Index must be non-negative"));
+
+    switch ( memMapping.get(#dynamic(#orderedByHash(kind))) ) {
+      case null ();
+      case (?map) {
+        if (map.containsKey(index)) return #err(#errBadRequest("Index already exists"));
+      };
+    };
+
+    // 2. CREATE THE CANISTER
 
     let newPrincipal = switch (await createCanister(#orderedByHash(kind))) {
       case (#ok(p)) p;
       case (#err(e)) return #err(e);
     };
 
-    // 2. SAVE THE CANISTER INFORMATION
+    // 3. SAVE THE CANISTER INFORMATION
 
     addOrderedByHashCanister(kind, newPrincipal, index);
 

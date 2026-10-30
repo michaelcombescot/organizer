@@ -38,6 +38,10 @@ export default defineConfig(({ command }) => ({
       didFile: "../.mops/.build/RegistryIndexes.did",
       outDir: "./src/backend/api",
     }),
+    icpBindgen({
+      didFile: "../.mops/.build/IndexMain.did",
+      outDir: "./src/backend/api",
+    }),
   ],
   ...(command === "serve" ? { server: getDevServerConfig() } : {}),
 }));

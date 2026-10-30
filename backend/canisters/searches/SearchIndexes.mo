@@ -12,7 +12,7 @@ import { ReqKind } "../../shared/Req";
 import Loc "../../shared/Loc";
 import Errors "../../shared/Errors";
 
-shared ({ caller }) actor class SearchIndexes(mapping: Canisters.Mapping) = this {
+shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
 
   include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#orderedByHash(#searchIndexes)); mapping = mapping });

@@ -1,5 +1,10 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { signal } from "@preact/signals";
+import { actorRegistryIndexes } from "../backend/actors/registryIndexes";
+import { stateCanistersIndexMain } from "./canisters";
+import { actorIndexMain } from "../backend/actors/indexMain";
+import { stateUserBucket } from "./userData";
+import { stateFlashes } from "./display";
 
 // Init client
 
@@ -26,12 +31,27 @@ export let statePrincipal = signal((await AUTH_CLIENT.getIdentity()).getPrincipa
 // Update authentication states
 
 export async function signIn() {
+  // await AUTH_CLIENT.signOut(); // nettoie proprement les credentials
+
   await AUTH_CLIENT.signIn({
     maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours
   });
   stateAuthenticated.value = await AUTH_CLIENT.isAuthenticated();
   stateIdentity.value = await AUTH_CLIENT.getIdentity();
   statePrincipal.value = (await AUTH_CLIENT.getIdentity()).getPrincipal().toString();
+
+  // Retrieve main indexes
+  let mainIndexes = await (await actorRegistryIndexes()).handlerGetMainIndexes();
+  stateCanistersIndexMain.value = mainIndexes;
+
+  // Retrieve the current user's bucket
+  let resUserBucket =  await (await actorIndexMain()).handlerGetCurrentUserBucket()
+  if (resUserBucket && "ok" in resUserBucket) {
+    stateUserBucket.value = resUserBucket.ok;
+  } else {
+    stateFlashes.flashError = `Failed to get user bucket`
+    console.log(`Failed to get user bucket:`, resUserBucket)
+  }
 }
 
 // Sign out

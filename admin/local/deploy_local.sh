@@ -37,44 +37,61 @@ echo "===== STATIC CANISTERS DEPLOYED ====="
 # The factory is the garant of the application full canister mapping.
 # It will be interogated by everyone, admin included, to retrieve the full mapping of canisters.
 
-echo " ===== MAKE FACTORY KNOW EVERYONE ====="
+echo " ===== MAKE STATIC CANISTERS KNOWN EACH OTHERS ====="
 
-icp canister call Factory systemAddStaticCanisters \
+echo "--- Make factory known everyone"
+
+icp canister call Factory handlerAddStaticCanisters \
   '(vec { record { variant { admin } ; principal "'"$ADMIN_ID"'" } })' \
   -e local \
   --identity local
 
 
-icp canister call Factory systemAddStaticCanisters \
+icp canister call Factory handlerAddStaticCanisters \
   '(vec { record { variant { registryIndexes } ; principal "'"$REGISTRY_INDEXES_ID"'" } })' \
   -e local \
   --identity local
 
-echo "===== FACTORY MAPPING UPDATED ====="
+echo "--- Make Registry know the Factory"
+
+icp canister call RegistryIndexes handlerAddStaticCanisters \
+  '(vec { record { variant { factory }; principal "'"$FACTORY_ID"'" } })' \
+  -e local \
+  --identity local
 
 # ===== CREATE BUCKETS =====
 # for the application to work, we need to have at least one IndexMain, one SearchIndexes, and one BucketUsers
 
 echo "===== CREATE BUCKETS ====="
 
-echo "--- Create IndexMain"
-icp canister call Factory handlerCreateOrderedByTimeCanister \
-  '(variant { indexMain })' \
-  -e local \
-  --identity local
-
 echo "--- Create SearchIndexes"
+
 icp canister call Factory handlerCreateOrderedByHashCanister \
   '(variant { searchIndexes } , 0 )' \
   -e local \
   --identity local
 
 echo "--- Create BucketUsers"
+
 icp canister call Factory handlerCreateOrderedByHashCanister \
   '(variant { bucketUsers } , 0)' \
   -e local \
   --identity local
 
+echo "--- Create IndexMain"
+
+icp canister call Factory handlerCreateOrderedByTimeCanister \
+  '(variant { indexMain })' \
+  -e local \
+  --identity local
+
+echo "--- Add IndexMain to the registryIndexes"
+
+icp canister call RegistryIndexes handlerUpdateMapping \
+  '()' \
+  -e local \
+  --identity local
+
 echo "===== BUCKETS CREATED ====="
 
-echo "===== DEPLOYMENT COMPLETE ====="
+echo "===== DEPLOYMENT COMPLETED ====="

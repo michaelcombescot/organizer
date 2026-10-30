@@ -4,7 +4,7 @@ import { stateIdentity } from "../../states/auth";
 
 const CANISTER_NAME = "RegistryIndexes";
 
-export async function actorBackend() {
+export async function actorRegistryIndexes() {
   const canisterEnv = safeGetCanisterEnv();
   const canisterId = canisterEnv?.[`PUBLIC_CANISTER_ID:${CANISTER_NAME}`];
   if (!canisterId) {

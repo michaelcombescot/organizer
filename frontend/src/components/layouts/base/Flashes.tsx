@@ -1,22 +1,22 @@
-import { stateFlash } from "../../../states/display";
+import { stateFlashes } from "../../../states/display";
 
 export default function Flashes() {
   return (
     <>
       <div class="flashes" role="alert">
-        {stateFlash.flashInfo.length != 0 && (
+        {stateFlashes.flashInfo.length != 0 && (
           <div class="flash" id="flash-info">
-            {stateFlash.flashInfo}
+            {stateFlashes.flashInfo}
           </div>
         )}
-        {stateFlash.flashError.length != 0 && (
+        {stateFlashes.flashError.length != 0 && (
           <div class="flash" id="flash-error">
-            {stateFlash.flashError}
+            {stateFlashes.flashError}
           </div>
         )}
-        {stateFlash.flashWarning.length != 0 && (
+        {stateFlashes.flashWarning.length != 0 && (
           <div class="flash" id="flash-warning">
-            {stateFlash.flashWarning}
+            {stateFlashes.flashWarning}
           </div>
         )}
       </div>

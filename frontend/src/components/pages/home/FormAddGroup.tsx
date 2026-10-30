@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { actorBackend } from "../../../backend/actors/backend";
+import { actorBackend } from "../../../backend/actors/registryIndexes";
 import { Kind, type CreateGroupParams } from "../../../backend/api/backend";
 import i18n from "../../../i18n/i18n";
 import { changeStateDisplayFlash, useModalStore } from "../../../states/display";

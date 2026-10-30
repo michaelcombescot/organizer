@@ -10,7 +10,7 @@ import Canisters "../../shared/Canisters";
 import ModTopUpCycles "ModTopUpCycles";
 
 shared ({ caller }) actor class Admin() = this {
-  include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#admin); mapping = { version = 0; canisters = [] } });
+  include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#admin); mapping = ?{ version = 0; canisters = [] } });
 
   // ===== CONFIGS =====
 

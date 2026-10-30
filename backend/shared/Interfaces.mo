@@ -7,7 +7,7 @@ import Canisters "Canisters";
 
 module Interfaces {
   public type ActorFactory = actor {
-    handlerGetFullMapping : shared () -> async Result<{ version: Nat; canisters: [(Canisters.CanisterKind, [(Nat, Principal)])] }, Errors.HandlerErr>;
+    handlerGetFullMapping : shared () -> async Result<?Canisters.Mapping, Errors.HandlerErr>;
   };
 
   public type ActorSearchIndexes = actor {

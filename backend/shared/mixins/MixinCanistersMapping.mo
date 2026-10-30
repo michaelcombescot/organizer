@@ -13,7 +13,7 @@ import Result "mo:core/Result";
 import { type HandlerErr } "../Errors";
 import { type ActorSearchIndexes; type ActorFactory; } "../Interfaces";
 
-mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.Mapping }) {
+mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.Mapping }) {
   // ===== CONFIGS =====
 
   let STALE_MAPPING_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
@@ -21,7 +21,9 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.M
   // ===== TYPES =====
 
   type InspectMapping = {
+    #handlerGetFullMapping : () -> ();
     #handlerUpdateMapping : () -> ();
+    #handlerAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
   };
 
   // ===== MEMORY =====
@@ -78,7 +80,8 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.M
 
     try {
       switch ( await actorFactory.handlerGetFullMapping() ) {
-        case (#ok(newMapping)) {
+        case (#ok(null)) return ();
+        case (#ok(?newMapping)) {
           if (newMapping.version <= currentVersion) return ();
 
           saveMapping(newMapping);
@@ -92,14 +95,15 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.M
     };
   };
 
-    func knownCanistersToMapping() : Canisters.Mapping {
+  func knownCanistersToMapping() : ?Canisters.Mapping {
     let result = List.empty<(Canisters.CanisterKind, [(Nat, Principal)])>();
 
     for ( (kind, map) in memMapping.entries() ) {
       result.add((kind, (map.entries().toArray())));
     };
 
-    { version = currentVersion; canisters = result.toArray() }
+    if (result.size() == 0) return null;
+    ?{ version = currentVersion; canisters = result.toArray() }
   };
 
     // === Permissions ===
@@ -165,9 +169,18 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.M
 
   // ===== INIT =====
 
-  if (memKnownCanisters.size() == 0) saveMapping(mapping);
+  switch (mapping) {
+    case (?m) saveMapping(m);
+    case null ();
+  };
 
   // ===== API =====
+
+  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<?Canisters.Mapping, HandlerErr> {
+    if ( not (isKnownBasic(caller)) ) return #err(#errForbidden);
+
+    #ok(knownCanistersToMapping())
+  };
 
   public shared ({caller}) func handlerUpdateMapping() : async Result.Result<(), HandlerErr> {
     if ( not isKnownBasic(caller) ) return #err(#errForbidden);
@@ -176,6 +189,13 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: Canisters.M
 
     await getAndSaveMapping();
 
+    #ok
+  };
+
+  public shared ({ caller }) func handlerAddStaticCanisters(canisters: [(Canisters.StaticKind, Principal)]) : async Result.Result<(), HandlerErr> {
+    if ( not isKnownBasic(caller) ) return #err(#errForbidden);
+
+    addStaticCanisters(canisters);
     #ok
   };
 }

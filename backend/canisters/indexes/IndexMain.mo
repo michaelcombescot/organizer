@@ -6,9 +6,10 @@ import Nat "mo:core/Nat";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import Canisters "../../shared/Canisters";
 import { type Result } "mo:core/Result";
+import Debug "mo:core/Debug";
 import { type HandlerErr } "../../shared/Errors";
 
-shared ({ caller }) actor class IndexMain(mapping: Canisters.Mapping) = this {
+shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
   let self = Principal.fromActor(this);
 
   include MixinCanistersMapping({ self = self; selfKind = #dynamic(#orderedByTime(#indexMain)); mapping = mapping });
@@ -36,6 +37,9 @@ shared ({ caller }) actor class IndexMain(mapping: Canisters.Mapping) = this {
   public query ({ caller }) func handlerGetCurrentUserBucket() : async Result<Principal, HandlerErr> {
     let ?map = memMapping.get(#dynamic(#orderedByHash(#bucketUsers))) else return #err(#errNotFound);
     let ?principal = map.get(Hash.hashText(caller.toText())) else return #err(#errNotFound);
+
+    Debug.print(debug_show(principal));
+
     #ok(principal);
   };
 };

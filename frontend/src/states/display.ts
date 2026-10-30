@@ -15,7 +15,7 @@ export let stateSidebar = signal(false);
 
 // FLASHES
 
-export let stateFlash = deepSignal({
+export let stateFlashes = deepSignal({
   flashInfo: "",
   flashError: "",
   flashWarning: "",

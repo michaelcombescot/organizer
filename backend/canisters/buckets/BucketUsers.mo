@@ -13,7 +13,7 @@ import Canisters "../../shared/Canisters";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import { type Job } "../../models/Job";
 
-shared ({ caller }) actor class BucketUsers(mapping: Canisters.Mapping) = this {
+shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
   let thisHash = thisPrincipal.hash().toNat();
 
@@ -36,7 +36,6 @@ shared ({ caller }) actor class BucketUsers(mapping: Canisters.Mapping) = this {
       #handlerCreateUser : () -> ();
       #handlerDeleteUser : () -> ();
       #handlerGetUserData : () -> ();
-      #handlerUpdateMapping : () -> (canisters : [(Canisters.CanisterKind, [(Nat, Principal)])]);
       #handlerUpdateUser : () -> {email : Text; name : Text; }
     } or InspectMapping;
   };
