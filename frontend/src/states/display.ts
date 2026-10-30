@@ -1,10 +1,10 @@
 import type { ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
-import { useDeepSignal } from 'deepsignal';
+import { deepSignal } from 'deepsignal';
 
 // MODAL
 
-export let stateModal = useDeepSignal({
+export let stateModal = deepSignal({
   visible: false,
   content: null as ComponentChildren,
 });
@@ -15,7 +15,7 @@ export let stateSidebar = signal(false);
 
 // FLASHES
 
-export let stateFlash = useDeepSignal({
+export let stateFlash = deepSignal({
   flashInfo: "",
   flashError: "",
   flashWarning: "",

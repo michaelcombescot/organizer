@@ -1,6 +1,6 @@
 import { createActor } from "../api/backend";
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
-import { STATE_IDENTITY } from "../../stores/auth";
+import { STATE_IDENTITY } from "../../states/auth";
 
 // Name of the canister in icp.yaml, read from the `ic_env` cookie
 const CANISTER_NAME = "RegistryIndexes";

@@ -1,20 +1,20 @@
 import Router, { Route } from "preact-router";
-import { authenticated, STATE_PRINCIPAL, signIn, signOut } from "../../../stores/auth";
+import { stateAuthenticated, statePrincipal, signIn, signOut } from "../../../states/auth";
 import i18n from "../../../i18n/i18n";
 import Home from "../../pages/home/Home";
 import Sidebar from "./Sidebar";
 import Modal from "./Modal";
-import { displayFlash } from "../../../stores/display";
+import Flashes from "./Flashes";
 
 export default function LayoutBase() {
   return (
     <div class="layout-base">
       <header class="flex justify-between items-center">
         <div id="actions-login-logout">
-          {authenticated.value ? (
+          {stateAuthenticated.value ? (
             <button
               id="action-logout"
-              title={STATE_PRINCIPAL}
+              title={statePrincipal.value}
               type="button"
               onClick={() => void signOut()}
             >
@@ -30,13 +30,7 @@ export default function LayoutBase() {
 
       <Sidebar />
       <Modal />
-      {displayFlash.value && (
-        <div class="flashes" role="alert">
-          <div class="flash" id={`flash-${displayFlash.value.type}`}>
-            {displayFlash.value.message}
-          </div>
-        </div>
-      )}
+      <Flashes />
 
       <main>
         <Router>

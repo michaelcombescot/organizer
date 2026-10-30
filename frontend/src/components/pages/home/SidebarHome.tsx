@@ -1,6 +1,6 @@
 import i18n from "../../../i18n/i18n";
-import { useModalStore } from "../../../stores/display";
-import { STATE_GROUPS } from "../../../stores/home";
+import { useModalStore } from "../../../states/display";
+import { STATE_GROUPS } from "../../../states/home";
 import SidebarHomeCardGroup from "./SidebarHomeCardGroup";
 import FormAddGroup from "./FormAddGroup";
 

@@ -2,8 +2,8 @@ import { useState } from "preact/hooks";
 import { actorBackend } from "../../../backend/actors/backend";
 import { Kind, type CreateGroupParams } from "../../../backend/api/backend";
 import i18n from "../../../i18n/i18n";
-import { changeStateDisplayFlash, useModalStore } from "../../../stores/display";
-import { changeStateGroups } from "../../../stores/home";
+import { changeStateDisplayFlash, useModalStore } from "../../../states/display";
+import { changeStateGroups } from "../../../states/home";
 
 export default function FormAddGroup() {
   const [group, setGroup] = useState<CreateGroupParams>({
