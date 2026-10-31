@@ -2,12 +2,15 @@ import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Error "mo:core/Error";
 import Map "mo:core/Map";
+import Timer "mo:core/Timer";
 import Canisters "../../shared/Canisters";
 import Errors "../../shared/Errors";
 import { ic } "mo:ic";
 
-module {
-    // ===== CONFIGS =====
+mixin<system>(memMapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>>) {
+  // ===== CONFIGS =====
+
+  let TIMER_TOP_UP_CYCLES = 1; // Timer interval in hours
 
   let TOPPING_LIMIT_REGISTRY_INDEXES = 1_000_000_000_000;
   let TOPPING_AMOUNT_REGISTRY_INDEXES = 1_000_000_000_000;
@@ -26,7 +29,7 @@ module {
 
   // ===== HELPERS =====
 
-  public func topUpCanister(kind: Canisters.CanisterKind, canisterId: Principal) : async Result.Result<(), Errors.HandlerErr> {
+  func topUpCanister(kind: Canisters.CanisterKind, canisterId: Principal) : async Result.Result<(), Errors.HandlerErr> {
     let status =try {
       await ic.canister_status({ canister_id = canisterId; })
     } catch (e) {
@@ -36,7 +39,6 @@ module {
     let (toppingAmount, toppingLimit) = switch (kind) {
       case (#static(s)) {
         switch (s) {
-          case (#admin) (0, 0);
           case (#registryIndexes) (TOPPING_AMOUNT_REGISTRY_INDEXES, TOPPING_LIMIT_REGISTRY_INDEXES);
           case (#factory) (TOPPING_AMOUNT_FACTORY, TOPPING_LIMIT_FACTORY);
         };
@@ -69,11 +71,17 @@ module {
     #ok(());
   };
 
-  public func topUpCanisters(mapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>>) : async () {
-    for ( (kind, map) in mapping.entries() ) {
+  func topUpCanisters() : async () {
+    for ( (kind, map) in memMapping.entries() ) {
       for ( (index, principal) in map.entries() ) {
         ignore await topUpCanister(kind, principal);
       };
     };
   };
+
+  // ===== JOBS =====
+
+  ignore Timer.recurringTimer<system>(#hours(TIMER_TOP_UP_CYCLES), func () : async () {
+    await topUpCanisters();
+  });
 }

@@ -2,10 +2,13 @@ import { type Result } "mo:core/Result";
 import { ReqKind } "../shared/Req";
 import Errors "Errors";
 import Loc "Loc";
-import Principal "mo:core/Principal";
 import Canisters "Canisters";
 
 module Interfaces {
+  public type ActorReceiveMapping = actor {
+    handlerUpdateMapping : shared (mapping: Canisters.Mapping) -> async Result<(), Errors.HandlerErr>;
+  };
+
   public type ActorFactory = actor {
     handlerGetFullMapping : shared () -> async Result<?Canisters.Mapping, Errors.HandlerErr>;
   };

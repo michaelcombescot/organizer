@@ -1,5 +1,6 @@
 import Text "mo:core/Text";
 import Order "mo:core/Order";
+import Time "mo:core/Time";
 
 module {
   public type CanisterKind = {
@@ -14,7 +15,6 @@ module {
   };
 
   public type StaticKind = {
-    #admin; // canister responsible for administrative tasks (topping up cycles, checking status etc)
     #factory; // canister responsible for creating other canisters, is the absolute reference for the canisters mapping
     #registryIndexes; // canister responsible for index canisters discovery
   };
@@ -36,5 +36,10 @@ module {
   public type Mapping = {
     version: Nat;
     canisters: [(CanisterKind, [(Nat, Principal)])];
+  };
+
+  public type Version = {
+    var currentVersion: Nat;
+    var lastVersionMaj: Time.Time;
   };
 }

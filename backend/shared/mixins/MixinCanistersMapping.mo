@@ -23,14 +23,17 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
 
   type InspectMapping = {
     #handlerGetFullMapping : () -> ();
-    #handlerUpdateMapping : () -> ();
+    #handlerFetchAndUpdateMapping : () -> ();
+    #handlerUpdateMapping : () -> (mapping: Canisters.Mapping);
     #handlerAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
   };
 
   // ===== MEMORY =====
 
-  var lastVersionMaj : Time.Time = Time.now();
-  var currentVersion = 0;
+  var memVersion: Canisters.Version = {
+    var currentVersion = 0;
+    var lastVersionMaj = Time.now();
+  };
   let memKnownCanisters = Map.empty<Principal, ()>();
   let memMapping = Map.empty<Canisters.CanisterKind, Map.Map<Nat, Principal>>();
 
@@ -69,8 +72,8 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
       };
     };
 
-    lastVersionMaj := Time.now();
-    currentVersion := mapping.version;
+    memVersion.lastVersionMaj := Time.now();
+    memVersion.currentVersion := mapping.version;
   };
 
   func getAndSaveMapping() : async () {
@@ -83,7 +86,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
       switch ( await actorFactory.handlerGetFullMapping() ) {
         case (#ok(null)) return ();
         case (#ok(?newMapping)) {
-          if (newMapping.version <= currentVersion) return ();
+          if (newMapping.version <= memVersion.currentVersion) return ();
 
           saveMapping(newMapping);
           return ();
@@ -96,15 +99,14 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
     };
   };
 
-  func knownCanistersToMapping() : ?Canisters.Mapping {
+  func knownCanistersToMapping() : Canisters.Mapping {
     let result = List.empty<(Canisters.CanisterKind, [(Nat, Principal)])>();
 
     for ( (kind, map) in memMapping.entries() ) {
       result.add((kind, (map.entries().toArray())));
     };
 
-    if (result.size() == 0) return null;
-    ?{ version = currentVersion; canisters = result.toArray() }
+    { version = memVersion.currentVersion; canisters = result.toArray() }
   };
 
     // === Permissions ===
@@ -116,10 +118,11 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
   func isKnown(caller: Principal) : async Bool {
     if ( isKnownBasic(caller) ) return true;
     
-    if ( lastVersionMaj < Time.now() - STALE_MAPPING_THRESHOLD ) return false;
+    if ( memVersion.lastVersionMaj < Time.now() - STALE_MAPPING_THRESHOLD ) return false;
 
     await getAndSaveMapping();
 
+    memVersion.lastVersionMaj := Time.now();
     true;
   };
 
@@ -161,13 +164,6 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
     ?(actor(principal.toText()) : ActorSearchIndexes)
   };
 
-  func getAdmin() : ?Principal {
-    let ?admin = memMapping.get(#static(#admin)) else return null;
-    let ?adminPrincipal = admin.get(0) else return null;
-
-    ?adminPrincipal
-  };
-
   // ===== INIT =====
 
   switch (mapping) {
@@ -177,18 +173,24 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
 
   // ===== API =====
 
-  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<?Canisters.Mapping, HandlerErr> {
+  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<Canisters.Mapping, HandlerErr> {
     if ( not (isKnownBasic(caller)) ) return #err(#errForbidden);
 
     #ok(knownCanistersToMapping())
   };
 
-  public shared ({caller}) func handlerUpdateMapping() : async Result.Result<(), HandlerErr> {
+  public shared ({caller}) func handlerFetchAndUpdateMapping() : async Result.Result<(), HandlerErr> {
     if ( not isKnownBasic(caller) ) return #err(#errForbidden);
 
-    Debug.print("Handler update mapping called by: " # caller.toText());
-
     await getAndSaveMapping();
+
+    #ok
+  };
+
+  public shared ({ caller }) func handlerUpdateMapping(mapping: Canisters.Mapping) : async Result.Result<(), HandlerErr> {
+    if ( not isKnownBasic(caller) ) return #err(#errForbidden);
+
+    saveMapping(mapping);
 
     #ok
   };

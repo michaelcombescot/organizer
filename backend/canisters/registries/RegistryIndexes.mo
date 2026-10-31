@@ -19,7 +19,7 @@ shared ({ caller }) actor class RegistryIndexes() = this {
 
   system func inspect(params: inspectParams) : Bool {
     if ( params.caller.isAnonymous() ) return false;
-    if ( params.arg.size() > 50 ) return false;
+    if ( params.arg.size() > 5000 ) return false;
 
     true
   };

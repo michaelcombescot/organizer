@@ -1,9 +1,5 @@
 canisters:
   # Canisters which needs to be deployed
-  - name: Admin
-    recipe:
-      type: "@dfinity/motoko@v5.1.0"
-
   - name: Factory
     recipe:
       type: "@dfinity/motoko@v5.1.0"
@@ -12,7 +8,8 @@ canisters:
     recipe:
       type: "@dfinity/motoko@v5.1.0"
 
-  # Canisters dynamically created
+  # Canisters dynamically created.
+  # Here to call: icp deploy ....
   - name: IndexMain
     recipe:
       type: "@dfinity/motoko@v5.1.0"

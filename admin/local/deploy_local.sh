@@ -3,10 +3,8 @@
 # we need to create:
 # 1. The factory canister
 # 2. The registryIndexes canister
-# 3. The admin canister
 # 4. Create a new index dynamically (call to factory)
-# 5. make the factory known to the admin and the RegistryIndexes > they will need to know about it to retrieve the updated mapping, if needed
-# 6. make the admin and the registryIndexes known to the factory
+# 5. make the registryIndexes known to the factory
 
 # Create a new identity if needed
 # icp identity new local --storage plaintext
@@ -16,18 +14,13 @@
 echo "===== CREATE STATIC CANISTERS ====="
 CURRENT_ID=$(icp identity principal --identity local)
 
-# create the admin canister first
-icp deploy Admin -e local --identity local --controller $CURRENT_ID --cycles 2_000_000_000_000
-
-ADMIN_ID=$(icp canister status Admin -e local --id-only)
-
 # then the factory canister
-icp deploy Factory -e local --identity local --controller $CURRENT_ID --controller $ADMIN_ID --cycles 20_000_000_000_000
+icp deploy Factory -e local --identity local --cycles 20_000_000_000_000
 
 FACTORY_ID=$(icp canister status Factory -e local --id-only)
 
 # then the registryIndexes canister
-icp deploy RegistryIndexes -e local --identity local --controller $CURRENT_ID --controller $ADMIN_ID --cycles 2_000_000_000_000
+icp deploy RegistryIndexes -e local --identity local --cycles 2_000_000_000_000
 
 REGISTRY_INDEXES_ID=$(icp canister status RegistryIndexes -e local --id-only)
 
@@ -42,17 +35,11 @@ echo " ===== MAKE STATIC CANISTERS KNOWN EACH OTHERS ====="
 echo "--- Make factory known everyone"
 
 icp canister call Factory handlerAddStaticCanisters \
-  '(vec { record { variant { admin } ; principal "'"$ADMIN_ID"'" } })' \
-  -e local \
-  --identity local
-
-
-icp canister call Factory handlerAddStaticCanisters \
   '(vec { record { variant { registryIndexes } ; principal "'"$REGISTRY_INDEXES_ID"'" } })' \
   -e local \
   --identity local
 
-echo "--- Make Registry know the Factory"
+echo "--- Make every static canister know the Factory"
 
 icp canister call RegistryIndexes handlerAddStaticCanisters \
   '(vec { record { variant { factory }; principal "'"$FACTORY_ID"'" } })' \
@@ -82,13 +69,6 @@ echo "--- Create IndexMain"
 
 icp canister call Factory handlerCreateOrderedByTimeCanister \
   '(variant { indexMain })' \
-  -e local \
-  --identity local
-
-echo "--- Add IndexMain to the registryIndexes"
-
-icp canister call RegistryIndexes handlerUpdateMapping \
-  '()' \
   -e local \
   --identity local
 
