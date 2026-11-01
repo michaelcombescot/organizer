@@ -1,8 +1,12 @@
 import Principal "mo:core/Principal";
+import Map "mo:core/Map";
+import Nat "mo:core/Nat";
+import Iter "mo:core/Iter";
 import Blob "mo:core/Blob";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import Canisters "../../shared/Canisters";
 import { type Result } "mo:core/Result";
+import List "mo:core/List";
 import { type HandlerErr } "../../shared/Errors";
 
 shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
@@ -16,6 +20,8 @@ shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
       arg: Blob;
       caller : Principal;
       msg : {
+        #handlerGetBucketUsers : () -> ([Nat]);
+        #handlerGetSearchIndexes : () -> ();
         #handlerGetCurrentUserBucket : () -> ();
       } or InspectMapping;
   };
@@ -30,7 +36,33 @@ shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
 
   // ===== HANDLERS =====
 
+  public query ({ caller }) func handlerGetBucketUsers(indexes: [Nat]) : async Result<[Principal], HandlerErr> {
+    if ( caller.isAnonymous() ) return #err(#errForbidden);
+
+    let ?map = memMapping.get(#dynamic(#orderedByHash(#bucketUsers))) else return #err(#errNotFound("Failed to find mapping for bucket users"));
+
+    let results = List.empty<Principal>();
+    for (index in indexes.values()) {
+      switch (map.get(index)) {
+        case (?principal) results.add(principal);
+        case null {};
+      }
+    };
+
+    #ok(results.toArray());
+  };
+
+  public query ({ caller }) func handlerGetSearchIndexes() : async Result<[(Nat, Principal)], HandlerErr> {
+    if ( caller.isAnonymous() ) return #err(#errForbidden);
+
+    let ?map = memMapping.get(#dynamic(#orderedByHash(#searchIndexes))) else return #ok([]);
+
+    #ok(map.entries().toArray());
+  };
+
   public query ({ caller }) func handlerGetCurrentUserBucket() : async Result<Principal, HandlerErr> {
+    if ( caller.isAnonymous() ) return #err(#errForbidden);
+
     let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#bucketUsers)), caller.toText()) else return #err(#errNotFound("Failed to find canister for caller"));
 
     #ok(principal);

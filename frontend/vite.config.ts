@@ -46,6 +46,10 @@ export default defineConfig(({ command }) => ({
       didFile: "../.mops/.build/BucketUsers.did",
       outDir: "./src/backend/api",
     }),
+    icpBindgen({
+      didFile: "../.mops/.build/SearchIndexes.did",
+      outDir: "./src/backend/api",
+    }),
   ],
   ...(command === "serve" ? { server: getDevServerConfig() } : {}),
 }));

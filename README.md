@@ -1,63 +1,60 @@
+### Rationnal
 
+This is a scaffold, you can use it as a baseline to create whatever you want.
+It's a solid base to have gloal search, infinite data, authentification, and centralized topping (via the factory).
 
-### App schema
+### App architecture
 
-The admin canister is fixed, responsability is to:
-- create new canisters
-- handle topping for cycles for all app canisters (job to check canister status for all canisters like all hours), then send it => remove the need to have a timer in each and every canister for that.
-- trigger update for all dynamically created canisters -> send a job to the worker to do that (worker should be compiled with the updated version of all other canisters, then updated, then the job should be send, otherwise the wasms won't be up to date)
-- send a job when a new canister is created to
-  -> all indexes which need to have a mapping of full app
-  -> all RegistryIndexes if the new canister is an index
+#### Different flavors of canisters
 
-the registry index is fixed responsability is to:
-- make all indexes known to the frontend
+This is a multi canisters architecture, Naturally, we will work with several specialized canisters, sorted by kind.
+Each kind can be found in backend/shared/Canisters.mo module, and each new kind should be declared here.
 
-All other canisters are dynamically created
+Kind are sorted in two main categories: #static and #dynamic.
 
-Indexes responsabilities are:
-- knowing all the app topology (same level of knowledge as the admin canister)
-- give to the frontend (once known via the registryIndexes) the adresses of buckets of interest. For exemple
-  -> if a user want to create a new group, the index must give him the adress of a canister with enough space to create the new group.
-     One way to do this: an index ask a new bucket of each kind and keep it as the current bucket in memory, do the call to create itself, and keep a counter to know if the number of group is under the limit
-- The precedent point imply that the index is a mandatory relay for any action which may lead to the creation of a new bucket (here create a new user, create a new group)
+#static canisters are the one which are not created by the factory.
+It can be due to two things:
+- only one of the kind must exists at anytime (here it's the factory)
+- there may be severals of the same kind (same actor, same wasm) and they are the one handling the discovery of canisters from the frontend
+  (here it's the registryIndexes)
 
-worker responsabilities are:
-- execute sequentially all jobs given to it, we will have a ring of workers to achieve that (selecting a random entry in an array of known workers)
+Then, for the dynamic ones, there is 2 subcategories: #orderedByHash and #orderedByTime.
 
-bucket users/groups:
-- store data
-- handle via direct frontend call any mono canister update, otherwise send multi canister call to a worker
+#orderedByHash: the canisters the application will need to find from a hash of a text/principal.
+For exemple, the bucketUsers canister store users data. At the beginning, we only have a single one. When the canisters memory will be filled up,
+we will need to create a second one.
+The goal, for scaling, is to be able to split fairly among both bucketUsers all users, identified by principals.
+To know where is the data for a specific principal, we hash the principal, and we find the right bucket in a ring with vnodes with the hash as an index.
+This logic willm be the same for global search buckets, where we will split the data (like name/email etc) evenly splitted among existing canisters.
 
-### Difficulties:
+#orderedByTime: canisters where data don't need to be evenly splitted, and the order of creation is the index in the ring.
+ex: You have a blog, each article take memory, when the bucket is full, you simply create a new one, you don't care about distribution,
+    you just need more storage when the precedent is full
 
-Inter bucket comunication necessiting synchronized updates (like adding a group to a user, -> need a call to the user bucket and a call to the group bucket )
-Solution ===> if one bucket is concerned => update the bucket diectly
-              if several buckets must be synched, pass by the worker
+#### How all of this works together
 
-The only thing is, buckets need to know all workers at any time, so how ?
-1) sync all buckets each time a worker is added => will do, the other solution is super annoying
+First, a little recap of the responsbility of each kind of canisters:
+- the Factory create new buckets, and top up all canisters in the app automatically via a job. It's capital that it have a LOT of cycles avaialbles at all time.
+- the RegistryIndexes is the only visible canister from the frontend. We may have several RegistryIndexes, but they must be declared in the icp.yml as new canisters
+  (RegistryIndexes, RegistryIndexes1, ...). Should not need a second one ever except if you have dozens of millions of users, a single call per connection, no data.
+  Main goal is to make all IndexMain discoverable by the frontend. 
+- the IndexMain is the routing canister. It can give to the frontend adresses of any other canister of interest. It can also be used as a middleman for
+  more complicated architectures where buckets are automatically created.
+- the BucketUsers: storage of users data (name, email, and whatever you'll need for your app). It's your responsability to split it/create a new one if the
+  memory/compute becomes a bottleneck.
+- the searchIndexes: storage of all indexes for global search (think index, like a normal db, find a user by name etc). Same as the BucketUsers, your *
+  responsability to split it if needed.
 
-
-### Init
-
-- create admin
-- create indexRegistry
-- add index registry principal to admin
-- launch admin init endpoint (create an index, a worker, a user bucket, a group bucket)
-
-
-
-##### REFLEXION
-
-Comment gérer le split:
-- statut dans le canister (pas de création)
-- entrypoint: get data
-- entrypoint delete data
-- mixin split avec 3 méthodes publiques: 
-  - start split (stop creation)
-  - get split data (from controller)
-  - save split data
-  - confirm data transfered (delete)
-  - stop split (reallow creation)
-
+The normal workflow:
+Launch the network:
+```
+icp network start -e local
+```
+You create all necessary canisters
+```
+./admin/local/initApp.sh
+```
+You start the frontend in dev mod
+```
+npm run dev --prefix frontend
+```

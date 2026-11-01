@@ -1,11 +1,11 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { signal } from "@preact/signals";
 import { actorRegistryIndexes } from "../backend/actors/registryIndexes";
-import { stateCanistersIndexMain } from "./canisters";
+import { stateCanistersIndexMain, stateCanistersSearchIndexes } from "./canisters";
 import { actorIndexMain } from "../backend/actors/indexMain";
 import { stateUserBucket, stateUserData } from "./user";
 import { stateFlashes } from "./display";
-import { actorBucketUsers } from "../backend/actors/bucketUsers";
+import { actorBucketUsersCurrent } from "../backend/actors/bucketUsers";
 
 // Init client
 
@@ -42,6 +42,15 @@ async function loadUserData() {
   let mainIndexes = await (await actorRegistryIndexes()).handlerGetMainIndexes();
   stateCanistersIndexMain.value = mainIndexes;
 
+  // Retrieve search indexes
+  let resSearchIndexes = await (await actorIndexMain()).handlerGetSearchIndexes();
+  if (resSearchIndexes && "ok" in resSearchIndexes) {
+    stateCanistersSearchIndexes.value = new Map(resSearchIndexes.ok);
+  } else {
+    stateFlashes.flashError = `Failed to get search indexes`;
+    console.log(`Failed to get search indexes:`, resSearchIndexes);
+  }
+
   // Retrieve the current user's bucket
   let resUserBucket =  await (await actorIndexMain()).handlerGetCurrentUserBucket()
   if (resUserBucket && "ok" in resUserBucket) {
@@ -52,11 +61,11 @@ async function loadUserData() {
   }
 
   // Retrieve the current user data
-  let resUserData = await (await actorBucketUsers()).handlerGetUserData();
+  let resUserData = await (await actorBucketUsersCurrent()).handlerGetUserData();
   if (resUserData && "ok" in resUserData) {
     stateUserData.userData = resUserData.ok;
   } else {
-    let resUserData = await (await actorBucketUsers()).handlerCreateUser();
+    let resUserData = await (await actorBucketUsersCurrent()).handlerCreateUser();
     if (resUserData && "ok" in resUserData) {
       console.log(`User crated successfully:`);
     } else {

@@ -18,6 +18,20 @@ module {
   };
 
   public type PublicUser = {
+    principal: Principal;
+    name : Text;
+    email : Text;
+  };
+
+  public func toPublic(self : User, principal: Principal) : PublicUser {
+    {
+      principal = principal;
+      name = self.data.name;
+      email = self.data.email;
+    };
+  };
+
+  public type PrivateUser = {
     name : Text;
     email : Text;
     groups : [Loc.Loc];
@@ -25,7 +39,7 @@ module {
     updatedAt : Time.Time;
   };
 
-  public func toPublic(self : User) : PublicUser {
+  public func toPrivate(self : User) : PrivateUser {
     {
       name = self.data.name;
       email = self.data.email;

@@ -2,11 +2,13 @@ import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import { type Result } "mo:core/Result";
 import Error "mo:core/Error";
+import Array "mo:core/Array";
 import Nat32 "mo:core/Nat32";
 import Blob "mo:core/Blob";
 import Time "mo:core/Time";
+import List "mo:core/List";
 import User "../../models/User";
-import { type User; type PublicUser } "../../models/User";
+import { type User; type PublicUser; type PrivateUser } "../../models/User";
 import Errors "../../shared/Errors";
 import Loc "../../shared/Loc";
 import Canisters "../../shared/Canisters";
@@ -33,9 +35,10 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
     arg: Blob;
     caller : Principal;
     msg : {
+      #handlerGetUsersPublicData : () -> (principals: [Principal]);
+      #handlerGetCurrentUserData : () -> ();
       #handlerCreateUser : () -> ();
       #handlerDeleteUser : () -> ();
-      #handlerGetUserData : () -> ();
       #handlerUpdateUser : () -> {email : Text; name : Text; }
     } or InspectMapping;
   };
@@ -49,10 +52,25 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetUserData() : async Result<PublicUser, Errors.HandlerErr> {
+  public query ({caller}) func handlerGetUsersPublicData(principals: [Principal]) : async Result<[PublicUser], Errors.HandlerErr> {
+    if ( caller.isAnonymous() ) return #err(#errForbidden);
+    if ( Array.size(principals) > 50 ) return #err(#errBadRequest("Too many principals requested"));
+
+    let users = List.empty<PublicUser>();
+    for (p in principals.values()) {
+      let ?user = memUsers.get(p) else return #err(#errNotFound("User not found"));
+      users.add(user.toPublic(p));
+    };
+
+    #ok(users.toArray());
+  };
+
+  public query ({ caller }) func handlerGetCurrentUserData() : async Result<PrivateUser, Errors.HandlerErr> {
+      if ( caller.isAnonymous() ) return #err(#errForbidden);
+
       let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
-      #ok(user.toPublic());
+      #ok(user.toPrivate());
   };
 
   public shared ({ caller }) func handlerCreateUser() : async Result<(), Errors.HandlerErr> {

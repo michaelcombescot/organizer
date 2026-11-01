@@ -23,6 +23,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
 
   type InspectMapping = {
     #handlerGetFullMapping : () -> ();
+    #handlerGetCanistersOfKind : () -> (kind: Canisters.CanisterKind);
     #handlerFetchAndUpdateMapping : () -> ();
     #handlerUpdateMapping : () -> (mapping: Canisters.Mapping);
     #handlerAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
@@ -177,6 +178,14 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
     if ( not (isKnownBasic(caller)) ) return #err(#errForbidden);
 
     #ok(knownCanistersToMapping())
+  };
+
+  public query ({ caller }) func handlerGetCanistersOfKind(kind: Canisters.CanisterKind) : async [Principal] {
+    if ( not caller.isController() ) return [];
+
+    let ?map = memMapping.get(kind) else return [];
+
+    map.values().toArray();
   };
 
   public shared ({caller}) func handlerFetchAndUpdateMapping() : async Result.Result<(), HandlerErr> {

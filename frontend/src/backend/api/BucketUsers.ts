@@ -56,8 +56,10 @@ export interface BucketUsersInterface {
     handlerCreateUser(): Promise<Result>;
     handlerDeleteUser(): Promise<Result>;
     handlerFetchAndUpdateMapping(): Promise<Result>;
+    handlerGetCanistersOfKind(kind: CanisterKind): Promise<Array<Principal>>;
+    handlerGetCurrentUserData(): Promise<Result_3>;
     handlerGetFullMapping(): Promise<Result_2>;
-    handlerGetUserData(): Promise<Result_1>;
+    handlerGetUsersPublicData(principals: Array<Principal>): Promise<Result_1>;
     handlerUpdateMapping(mapping: Mapping): Promise<Result>;
     handlerUpdateUser(arg0: {
         name: string;
@@ -131,12 +133,17 @@ export interface Mapping {
     version: bigint;
     canisters: Array<[CanisterKind, Array<[bigint, Principal]>]>;
 }
-export interface PublicUser {
+export interface PrivateUser {
     groups: Array<Loc>;
     name: string;
     createdAt: Time;
     email: string;
     updatedAt: Time;
+}
+export interface PublicUser {
+    principal: Principal;
+    name: string;
+    email: string;
 }
 export type Result = {
     __kind__: "ok";
@@ -147,7 +154,7 @@ export type Result = {
 };
 export type Result_1 = {
     __kind__: "ok";
-    ok: PublicUser;
+    ok: Array<PublicUser>;
 } | {
     __kind__: "err";
     err: HandlerErr;
@@ -155,6 +162,13 @@ export type Result_1 = {
 export type Result_2 = {
     __kind__: "ok";
     ok: Mapping;
+} | {
+    __kind__: "err";
+    err: HandlerErr;
+};
+export type Result_3 = {
+    __kind__: "ok";
+    ok: PrivateUser;
 } | {
     __kind__: "err";
     err: HandlerErr;
@@ -186,7 +200,7 @@ export enum StaticKind {
 }
 export interface BucketUsersInterface extends BucketUsersInterface {
 }
-import type { CanisterKind as _CanisterKind, DynamicKind as _DynamicKind, HandlerErr as _HandlerErr, Loc as _Loc, Mapping as _Mapping, OrderedByHashKind as _OrderedByHashKind, OrderedByTimeKind as _OrderedByTimeKind, PublicUser as _PublicUser, Result as _Result, Result_1 as _Result_1, Result_2 as _Result_2, StaticKind as _StaticKind, Time as _Time, ValidationErr as _ValidationErr } from "./declarations/BucketUsers.did";
+import type { CanisterKind as _CanisterKind, DynamicKind as _DynamicKind, HandlerErr as _HandlerErr, Loc as _Loc, Mapping as _Mapping, OrderedByHashKind as _OrderedByHashKind, OrderedByTimeKind as _OrderedByTimeKind, PrivateUser as _PrivateUser, PublicUser as _PublicUser, Result as _Result, Result_1 as _Result_1, Result_2 as _Result_2, Result_3 as _Result_3, StaticKind as _StaticKind, Time as _Time, ValidationErr as _ValidationErr } from "./declarations/BucketUsers.did";
 export class BucketUsers implements BucketUsersInterface {
     constructor(private actor: ActorSubclass<_SERVICE>){}
     async handlerAddStaticCanisters(arg0: Array<[StaticKind, Principal]>): Promise<Result> {
@@ -205,16 +219,24 @@ export class BucketUsers implements BucketUsersInterface {
         const result = await this.actor.handlerFetchAndUpdateMapping();
         return from_candid_Result_n4(result);
     }
+    async handlerGetCanistersOfKind(arg0: CanisterKind): Promise<Array<Principal>> {
+        const result = await this.actor.handlerGetCanistersOfKind(to_candid_CanisterKind_n11(arg0));
+        return result;
+    }
+    async handlerGetCurrentUserData(): Promise<Result_3> {
+        const result = await this.actor.handlerGetCurrentUserData();
+        return from_candid_Result_3_n17(result);
+    }
     async handlerGetFullMapping(): Promise<Result_2> {
         const result = await this.actor.handlerGetFullMapping();
-        return from_candid_Result_2_n11(result);
+        return from_candid_Result_2_n25(result);
     }
-    async handlerGetUserData(): Promise<Result_1> {
-        const result = await this.actor.handlerGetUserData();
-        return from_candid_Result_1_n24(result);
+    async handlerGetUsersPublicData(arg0: Array<Principal>): Promise<Result_1> {
+        const result = await this.actor.handlerGetUsersPublicData(arg0);
+        return from_candid_Result_1_n38(result);
     }
     async handlerUpdateMapping(arg0: Mapping): Promise<Result> {
-        const result = await this.actor.handlerUpdateMapping(to_candid_Mapping_n32(arg0));
+        const result = await this.actor.handlerUpdateMapping(to_candid_Mapping_n40(arg0));
         return from_candid_Result_n4(result);
     }
     async handlerUpdateUser(arg0: {
@@ -225,61 +247,52 @@ export class BucketUsers implements BucketUsersInterface {
         return from_candid_Result_n4(result);
     }
 }
-function from_candid_CanisterKind_n17(value: _CanisterKind): CanisterKind {
-    return from_candid_variant_n18(value);
+function from_candid_CanisterKind_n31(value: _CanisterKind): CanisterKind {
+    return from_candid_variant_n32(value);
 }
-function from_candid_DynamicKind_n20(value: _DynamicKind): DynamicKind {
-    return from_candid_variant_n21(value);
+function from_candid_DynamicKind_n34(value: _DynamicKind): DynamicKind {
+    return from_candid_variant_n35(value);
 }
 function from_candid_HandlerErr_n6(value: _HandlerErr): HandlerErr {
     return from_candid_variant_n7(value);
 }
-function from_candid_Loc_n29(value: _Loc): Loc {
-    return from_candid_record_n30(value);
+function from_candid_Loc_n22(value: _Loc): Loc {
+    return from_candid_record_n23(value);
 }
-function from_candid_Mapping_n13(value: _Mapping): Mapping {
-    return from_candid_record_n14(value);
+function from_candid_Mapping_n27(value: _Mapping): Mapping {
+    return from_candid_record_n28(value);
 }
-function from_candid_OrderedByHashKind_n22(value: _OrderedByHashKind): OrderedByHashKind {
+function from_candid_OrderedByHashKind_n36(value: _OrderedByHashKind): OrderedByHashKind {
     return "searchIndexes" in value ? OrderedByHashKind.searchIndexes : "bucketUsers" in value ? OrderedByHashKind.bucketUsers : value;
 }
-function from_candid_OrderedByTimeKind_n23(value: _OrderedByTimeKind): OrderedByTimeKind {
+function from_candid_OrderedByTimeKind_n37(value: _OrderedByTimeKind): OrderedByTimeKind {
     return "indexMain" in value ? OrderedByTimeKind.indexMain : value;
 }
-function from_candid_PublicUser_n26(value: _PublicUser): PublicUser {
-    return from_candid_record_n27(value);
+function from_candid_PrivateUser_n19(value: _PrivateUser): PrivateUser {
+    return from_candid_record_n20(value);
 }
-function from_candid_Result_1_n24(value: _Result_1): Result_1 {
-    return from_candid_variant_n25(value);
+function from_candid_Result_1_n38(value: _Result_1): Result_1 {
+    return from_candid_variant_n39(value);
 }
-function from_candid_Result_2_n11(value: _Result_2): Result_2 {
-    return from_candid_variant_n12(value);
+function from_candid_Result_2_n25(value: _Result_2): Result_2 {
+    return from_candid_variant_n26(value);
+}
+function from_candid_Result_3_n17(value: _Result_3): Result_3 {
+    return from_candid_variant_n18(value);
 }
 function from_candid_Result_n4(value: _Result): Result {
     return from_candid_variant_n5(value);
 }
-function from_candid_StaticKind_n19(value: _StaticKind): StaticKind {
+function from_candid_StaticKind_n33(value: _StaticKind): StaticKind {
     return "factory" in value ? StaticKind.factory : "registryIndexes" in value ? StaticKind.registryIndexes : value;
 }
 function from_candid_ValidationErr_n9(value: _ValidationErr): ValidationErr {
     return from_candid_variant_n10(value);
 }
-function from_candid_opt_n31(value: [] | [bigint]): bigint | null {
+function from_candid_opt_n24(value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_record_n14(value: {
-    version: bigint;
-    canisters: Array<[_CanisterKind, Array<[bigint, Principal]>]>;
-}): {
-    version: bigint;
-    canisters: Array<[CanisterKind, Array<[bigint, Principal]>]>;
-} {
-    return {
-        version: value.version,
-        canisters: from_candid_vec_n15(value.canisters)
-    };
-}
-function from_candid_record_n27(value: {
+function from_candid_record_n20(value: {
     groups: Array<_Loc>;
     name: string;
     createdAt: _Time;
@@ -293,14 +306,14 @@ function from_candid_record_n27(value: {
     updatedAt: Time;
 } {
     return {
-        groups: from_candid_vec_n28(value.groups),
+        groups: from_candid_vec_n21(value.groups),
         name: value.name,
         createdAt: value.createdAt,
         email: value.email,
         updatedAt: value.updatedAt
     };
 }
-function from_candid_record_n30(value: {
+function from_candid_record_n23(value: {
     id: [] | [bigint];
     bucketHash: bigint;
 }): {
@@ -308,13 +321,25 @@ function from_candid_record_n30(value: {
     bucketHash: bigint;
 } {
     return {
-        id: record_opt_to_undefined(from_candid_opt_n31(value.id)),
+        id: record_opt_to_undefined(from_candid_opt_n24(value.id)),
         bucketHash: value.bucketHash
     };
 }
-function from_candid_tuple_n16(value: [_CanisterKind, Array<[bigint, Principal]>]): [CanisterKind, Array<[bigint, Principal]>] {
+function from_candid_record_n28(value: {
+    version: bigint;
+    canisters: Array<[_CanisterKind, Array<[bigint, Principal]>]>;
+}): {
+    version: bigint;
+    canisters: Array<[CanisterKind, Array<[bigint, Principal]>]>;
+} {
+    return {
+        version: value.version,
+        canisters: from_candid_vec_n29(value.canisters)
+    };
+}
+function from_candid_tuple_n30(value: [_CanisterKind, Array<[bigint, Principal]>]): [CanisterKind, Array<[bigint, Principal]>] {
     return [
-        from_candid_CanisterKind_n17(value[0]),
+        from_candid_CanisterKind_n31(value[0]),
         value[1]
     ];
 }
@@ -349,7 +374,26 @@ function from_candid_variant_n10(value: {
         badLength: value.badLength
     } : value;
 }
-function from_candid_variant_n12(value: {
+function from_candid_variant_n18(value: {
+    ok: _PrivateUser;
+} | {
+    err: _HandlerErr;
+}): {
+    __kind__: "ok";
+    ok: PrivateUser;
+} | {
+    __kind__: "err";
+    err: HandlerErr;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_PrivateUser_n19(value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: from_candid_HandlerErr_n6(value.err)
+    } : value;
+}
+function from_candid_variant_n26(value: {
     ok: _Mapping;
 } | {
     err: _HandlerErr;
@@ -362,13 +406,13 @@ function from_candid_variant_n12(value: {
 } {
     return "ok" in value ? {
         __kind__: "ok",
-        ok: from_candid_Mapping_n13(value.ok)
+        ok: from_candid_Mapping_n27(value.ok)
     } : "err" in value ? {
         __kind__: "err",
         err: from_candid_HandlerErr_n6(value.err)
     } : value;
 }
-function from_candid_variant_n18(value: {
+function from_candid_variant_n32(value: {
     static: _StaticKind;
 } | {
     dynamic: _DynamicKind;
@@ -381,13 +425,13 @@ function from_candid_variant_n18(value: {
 } {
     return "static" in value ? {
         __kind__: "static",
-        static: from_candid_StaticKind_n19(value.static)
+        static: from_candid_StaticKind_n33(value.static)
     } : "dynamic" in value ? {
         __kind__: "dynamic",
-        dynamic: from_candid_DynamicKind_n20(value.dynamic)
+        dynamic: from_candid_DynamicKind_n34(value.dynamic)
     } : value;
 }
-function from_candid_variant_n21(value: {
+function from_candid_variant_n35(value: {
     orderedByHash: _OrderedByHashKind;
 } | {
     orderedByTime: _OrderedByTimeKind;
@@ -400,26 +444,26 @@ function from_candid_variant_n21(value: {
 } {
     return "orderedByHash" in value ? {
         __kind__: "orderedByHash",
-        orderedByHash: from_candid_OrderedByHashKind_n22(value.orderedByHash)
+        orderedByHash: from_candid_OrderedByHashKind_n36(value.orderedByHash)
     } : "orderedByTime" in value ? {
         __kind__: "orderedByTime",
-        orderedByTime: from_candid_OrderedByTimeKind_n23(value.orderedByTime)
+        orderedByTime: from_candid_OrderedByTimeKind_n37(value.orderedByTime)
     } : value;
 }
-function from_candid_variant_n25(value: {
-    ok: _PublicUser;
+function from_candid_variant_n39(value: {
+    ok: Array<_PublicUser>;
 } | {
     err: _HandlerErr;
 }): {
     __kind__: "ok";
-    ok: PublicUser;
+    ok: Array<PublicUser>;
 } | {
     __kind__: "err";
     err: HandlerErr;
 } {
     return "ok" in value ? {
         __kind__: "ok",
-        ok: from_candid_PublicUser_n26(value.ok)
+        ok: value.ok
     } : "err" in value ? {
         __kind__: "err",
         err: from_candid_HandlerErr_n6(value.err)
@@ -563,32 +607,32 @@ function from_candid_variant_n7(value: {
         errCannotVerifyCaller: value.errCannotVerifyCaller
     } : value;
 }
-function from_candid_vec_n15(value: Array<[_CanisterKind, Array<[bigint, Principal]>]>): Array<[CanisterKind, Array<[bigint, Principal]>]> {
-    return value.map((x)=>from_candid_tuple_n16(x));
+function from_candid_vec_n21(value: Array<_Loc>): Array<Loc> {
+    return value.map((x)=>from_candid_Loc_n22(x));
 }
-function from_candid_vec_n28(value: Array<_Loc>): Array<Loc> {
-    return value.map((x)=>from_candid_Loc_n29(x));
+function from_candid_vec_n29(value: Array<[_CanisterKind, Array<[bigint, Principal]>]>): Array<[CanisterKind, Array<[bigint, Principal]>]> {
+    return value.map((x)=>from_candid_tuple_n30(x));
 }
 function from_candid_vec_n8(value: Array<_ValidationErr>): Array<ValidationErr> {
     return value.map((x)=>from_candid_ValidationErr_n9(x));
 }
-function to_candid_CanisterKind_n36(value: CanisterKind): _CanisterKind {
-    return to_candid_variant_n37(value);
+function to_candid_CanisterKind_n11(value: CanisterKind): _CanisterKind {
+    return to_candid_variant_n12(value);
 }
-function to_candid_DynamicKind_n38(value: DynamicKind): _DynamicKind {
-    return to_candid_variant_n39(value);
+function to_candid_DynamicKind_n13(value: DynamicKind): _DynamicKind {
+    return to_candid_variant_n14(value);
 }
-function to_candid_Mapping_n32(value: Mapping): _Mapping {
-    return to_candid_record_n33(value);
+function to_candid_Mapping_n40(value: Mapping): _Mapping {
+    return to_candid_record_n41(value);
 }
-function to_candid_OrderedByHashKind_n41(value: OrderedByHashKind): _OrderedByHashKind {
+function to_candid_OrderedByHashKind_n16(value: OrderedByHashKind): _OrderedByHashKind {
     return value == OrderedByHashKind.searchIndexes ? {
         searchIndexes: null
     } : value == OrderedByHashKind.bucketUsers ? {
         bucketUsers: null
     } : value;
 }
-function to_candid_OrderedByTimeKind_n40(value: OrderedByTimeKind): _OrderedByTimeKind {
+function to_candid_OrderedByTimeKind_n15(value: OrderedByTimeKind): _OrderedByTimeKind {
     return value == OrderedByTimeKind.indexMain ? {
         indexMain: null
     } : value;
@@ -600,7 +644,7 @@ function to_candid_StaticKind_n3(value: StaticKind): _StaticKind {
         registryIndexes: null
     } : value;
 }
-function to_candid_record_n33(value: {
+function to_candid_record_n41(value: {
     version: bigint;
     canisters: Array<[CanisterKind, Array<[bigint, Principal]>]>;
 }): {
@@ -609,7 +653,7 @@ function to_candid_record_n33(value: {
 } {
     return {
         version: value.version,
-        canisters: to_candid_vec_n34(value.canisters)
+        canisters: to_candid_vec_n42(value.canisters)
     };
 }
 function to_candid_tuple_n2(value: [StaticKind, Principal]): [_StaticKind, Principal] {
@@ -618,13 +662,13 @@ function to_candid_tuple_n2(value: [StaticKind, Principal]): [_StaticKind, Princ
         value[1]
     ];
 }
-function to_candid_tuple_n35(value: [CanisterKind, Array<[bigint, Principal]>]): [_CanisterKind, Array<[bigint, Principal]>] {
+function to_candid_tuple_n43(value: [CanisterKind, Array<[bigint, Principal]>]): [_CanisterKind, Array<[bigint, Principal]>] {
     return [
-        to_candid_CanisterKind_n36(value[0]),
+        to_candid_CanisterKind_n11(value[0]),
         value[1]
     ];
 }
-function to_candid_variant_n37(value: {
+function to_candid_variant_n12(value: {
     __kind__: "static";
     static: StaticKind;
 } | {
@@ -638,10 +682,10 @@ function to_candid_variant_n37(value: {
     return value.__kind__ === "static" ? {
         static: to_candid_StaticKind_n3(value.static)
     } : value.__kind__ === "dynamic" ? {
-        dynamic: to_candid_DynamicKind_n38(value.dynamic)
+        dynamic: to_candid_DynamicKind_n13(value.dynamic)
     } : value;
 }
-function to_candid_variant_n39(value: {
+function to_candid_variant_n14(value: {
     __kind__: "orderedByHash";
     orderedByHash: OrderedByHashKind;
 } | {
@@ -653,16 +697,16 @@ function to_candid_variant_n39(value: {
     orderedByTime: _OrderedByTimeKind;
 } {
     return value.__kind__ === "orderedByHash" ? {
-        orderedByHash: to_candid_OrderedByHashKind_n41(value.orderedByHash)
+        orderedByHash: to_candid_OrderedByHashKind_n16(value.orderedByHash)
     } : value.__kind__ === "orderedByTime" ? {
-        orderedByTime: to_candid_OrderedByTimeKind_n40(value.orderedByTime)
+        orderedByTime: to_candid_OrderedByTimeKind_n15(value.orderedByTime)
     } : value;
 }
 function to_candid_vec_n1(value: Array<[StaticKind, Principal]>): Array<[_StaticKind, Principal]> {
     return value.map((x)=>to_candid_tuple_n2(x));
 }
-function to_candid_vec_n34(value: Array<[CanisterKind, Array<[bigint, Principal]>]>): Array<[_CanisterKind, Array<[bigint, Principal]>]> {
-    return value.map((x)=>to_candid_tuple_n35(x));
+function to_candid_vec_n42(value: Array<[CanisterKind, Array<[bigint, Principal]>]>): Array<[_CanisterKind, Array<[bigint, Principal]>]> {
+    return value.map((x)=>to_candid_tuple_n43(x));
 }
 export interface CreateActorOptions {
     agent?: Agent;
