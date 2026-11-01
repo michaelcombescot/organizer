@@ -9,7 +9,15 @@ export const ENGLISH: Language = {
 
     layoutLoginLink: "Login",
     layoutLogoutLink: "Logout",
+    layoutUserPrincipal: "Your principal",  
+    layoutUserSettingsLink: "Settings",
     
+    // ===== USERS =====
+    userSettingsFormTitle: "User Settings",
+    userSettingsFormNameLabel: "Name",
+    userSettingsFormEmailLabel: "Email",
+    userSettingsFormSaveButton: "Save",
+
     // ===== HOME =====
     homeSidebarTitleGroups: "Groups",
     homeSidebarSelectGroupsAll: "All groups",

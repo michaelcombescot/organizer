@@ -3,8 +3,9 @@ import { signal } from "@preact/signals";
 import { actorRegistryIndexes } from "../backend/actors/registryIndexes";
 import { stateCanistersIndexMain } from "./canisters";
 import { actorIndexMain } from "../backend/actors/indexMain";
-import { stateUserBucket } from "./userData";
+import { stateUserBucket, stateUserData } from "./user";
 import { stateFlashes } from "./display";
+import { actorBucketUsers } from "../backend/actors/bucketUsers";
 
 // Init client
 
@@ -51,6 +52,20 @@ export async function signIn() {
   } else {
     stateFlashes.flashError = `Failed to get user bucket`
     console.log(`Failed to get user bucket:`, resUserBucket)
+  }
+
+  // Retrieve the current user data
+  let resUserData = await (await actorBucketUsers()).handlerGetUserData();
+  if (resUserData && "ok" in resUserData) {
+    stateUserData.userData = resUserData.ok;
+  } else {
+    let resUserData = await (await actorBucketUsers()).handlerCreateUser();
+    if (resUserData && "ok" in resUserData) {
+      console.log(`User crated successfully:`);
+    } else {
+      stateFlashes.flashError = `Failed to create user data`;
+      console.log(`Failed to create user data:`, resUserData);
+    }
   }
 }
 

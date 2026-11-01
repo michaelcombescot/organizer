@@ -6,7 +6,7 @@ module {
     #errMustBeController;
     #errForbidden;
     #errCannotVerifyCaller;
-    #errNotFound;
+    #errNotFound: Text;
     #errMemoryLimitReached; // used when a canister memory limit is reached
     #errBadRequest: Text;
     #errWrongCanister; // used when a bucket/search is selected albeit it's the wrong range

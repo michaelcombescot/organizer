@@ -31,7 +31,7 @@ shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
   // ===== HANDLERS =====
 
   public query ({ caller }) func handlerGetCurrentUserBucket() : async Result<Principal, HandlerErr> {
-    let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#bucketUsers)), caller.toText()) else return #err(#errNotFound);
+    let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#bucketUsers)), caller.toText()) else return #err(#errNotFound("Failed to find canister for caller"));
 
     #ok(principal);
   };

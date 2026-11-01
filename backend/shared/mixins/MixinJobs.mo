@@ -125,7 +125,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   public shared ({ caller }) func handlerRequeueFailedJobImmediatly(jobId: Nat) : async Result<(), HandlerErr> {
     if (not caller.isController()) return #err(#errMustBeController);
 
-    let ?failedJob = memJobFailed.get(jobId) else return #err(#errNotFound);
+    let ?failedJob = memJobFailed.get(jobId) else return #err(#errNotFound("Failed to find failed job with ID " # jobId.toText()));
     
     let updatedJob = { failedJob with nbRetry = 0; retryAt = Time.now() };
 

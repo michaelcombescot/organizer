@@ -11,6 +11,15 @@ export interface Translations {
     // ===== LAYOUT =====
     layoutLoginLink: string;
     layoutLogoutLink: string;
+    layoutUserPrincipal: string;
+    layoutUserSettingsLink: string;
+
+    // ===== USERS =====
+
+    userSettingsFormTitle: string;
+    userSettingsFormNameLabel: string;
+    userSettingsFormEmailLabel: string;
+    userSettingsFormSaveButton: string;
 
     // ===== HOME =====
     homeSidebarTitleGroups: string,

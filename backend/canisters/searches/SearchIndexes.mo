@@ -67,7 +67,14 @@ shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = thi
   public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text }) : async Result<(), Errors.HandlerErr> {
     if ( not (await isKnown(caller)) ) return #err(#errForbidden);
 
-    let ?map = memQuery.get(kind) else { return #err(#errNotFound) };
+    let map = switch ( memQuery.get(kind) ) {
+      case (?m) m;
+      case (null) {
+        let newMap = Map.empty<Text, Loc.Loc>();
+        memQuery.add(kind, newMap);
+        newMap
+      }
+    };
     
     if ( map.containsKey(key) ) return #err(#errIndexAlreadyExists);
 

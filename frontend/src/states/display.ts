@@ -4,7 +4,7 @@ import { deepSignal } from 'deepsignal';
 
 // MODAL
 
-export let stateModal = deepSignal({
+export let stateModal = signal({
   visible: false,
   content: null as ComponentChildren,
 });

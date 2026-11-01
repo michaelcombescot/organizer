@@ -50,7 +50,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
   // ===== HANDLERS =====
 
   public query ({ caller }) func handlerGetUserData() : async Result<PublicUser, Errors.HandlerErr> {
-      let ?user = memUsers.get(caller) else return #err(#errNotFound);
+      let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
       #ok(user.toPublic());
   };
@@ -61,7 +61,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
 
     if ( memUsers.containsKey(caller) ) return #err(#errValidation([#alreadyExists { field = "caller" }]));
 
-    let ?indexPrincipal = createActorSearchIndexesFor(caller.toText()) else return #err(#errNotFound);
+    let ?indexPrincipal = createActorSearchIndexesFor(caller.toText()) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
     let user: User = {
       data = { name = ""; email = "" };
@@ -92,7 +92,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
     name: Text;
     email: Text
   }) : async Result<(), Errors.HandlerErr> {
-    let ?user = memUsers.get(caller) else return #err(#errNotFound);
+    let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
     let updatedData = { user.data with name = name; email = email };
     let updatedUser = { user with data = updatedData; updatedAt = Time.now() };
@@ -103,7 +103,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
   };
 
   public shared ({ caller }) func handlerDeleteUser() : async Result<(), Errors.HandlerErr> {
-    if ( not memUsers.containsKey(caller) ) return #err(#errNotFound);
+    if ( not memUsers.containsKey(caller) ) return #err(#errNotFound("User not found"));
 
     memUsers.remove(caller);
 
