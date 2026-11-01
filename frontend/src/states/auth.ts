@@ -29,14 +29,11 @@ export let stateAuthenticated = signal(AUTH_CLIENT.isAuthenticated());
 export let stateIdentity = signal(await AUTH_CLIENT.getIdentity());
 export let statePrincipal = signal((await AUTH_CLIENT.getIdentity()).getPrincipal().toString());
 
-// Update authentication states
+if (stateAuthenticated.value) {
+  await loadUserData();
+}
 
-export async function signIn() {
-  // await AUTH_CLIENT.signOut(); // nettoie proprement les credentials
-
-  await AUTH_CLIENT.signIn({
-    maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours
-  });
+async function loadUserData() {
   stateAuthenticated.value = await AUTH_CLIENT.isAuthenticated();
   stateIdentity.value = await AUTH_CLIENT.getIdentity();
   statePrincipal.value = (await AUTH_CLIENT.getIdentity()).getPrincipal().toString();
@@ -67,6 +64,16 @@ export async function signIn() {
       console.log(`Failed to create user data:`, resUserData);
     }
   }
+}
+
+export async function signIn() {
+  // await AUTH_CLIENT.signOut(); // nettoie proprement les credentials
+
+  await AUTH_CLIENT.signIn({
+    maxTimeToLive: BigInt(8) * BigInt(3_600_000_000_000), // 8 hours
+  });
+  
+  await loadUserData();
 }
 
 // Sign out
