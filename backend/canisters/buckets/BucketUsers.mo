@@ -3,7 +3,6 @@ import Principal "mo:core/Principal";
 import { type Result } "mo:core/Result";
 import Error "mo:core/Error";
 import Array "mo:core/Array";
-import Nat32 "mo:core/Nat32";
 import Blob "mo:core/Blob";
 import Time "mo:core/Time";
 import List "mo:core/List";
@@ -13,11 +12,9 @@ import Errors "../../shared/Errors";
 import Loc "../../shared/Loc";
 import Canisters "../../shared/Canisters";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
-import { type Job } "../../models/Job";
 
 shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this {
   let thisPrincipal = Principal.fromActor(this);
-  let thisHash = thisPrincipal.hash().toNat();
 
   include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#orderedByHash(#bucketUsers)); mapping = mapping });
   
@@ -35,7 +32,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
     arg: Blob;
     caller : Principal;
     msg : {
-      #handlerGetUsersPublicData : () -> (principals: [Principal]);
+      #handlerGetUsersPublicData : () -> (usersPrincipals: [Principal]);
       #handlerGetCurrentUserData : () -> ();
       #handlerCreateUser : () -> ();
       #handlerDeleteUser : () -> ();
@@ -52,12 +49,12 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
 
   // ===== HANDLERS =====
 
-  public query ({caller}) func handlerGetUsersPublicData(principals: [Principal]) : async Result<[PublicUser], Errors.HandlerErr> {
+  public query ({caller}) func handlerGetUsersPublicData(usersPrincipals: [Principal]) : async Result<[PublicUser], Errors.HandlerErr> {
     if ( caller.isAnonymous() ) return #err(#errForbidden);
-    if ( Array.size(principals) > 50 ) return #err(#errBadRequest("Too many principals requested"));
+    if ( Array.size(usersPrincipals) > 50 ) return #err(#errBadRequest("Too many principals requested"));
 
     let users = List.empty<PublicUser>();
-    for (p in principals.values()) {
+    for (p in usersPrincipals.values()) {
       let ?user = memUsers.get(p) else return #err(#errNotFound("User not found"));
       users.add(user.toPublic(p));
     };
@@ -80,6 +77,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
     if ( memUsers.containsKey(caller) ) return #err(#errValidation([#alreadyExists { field = "caller" }]));
 
     let ?indexPrincipal = createActorSearchIndexesFor(caller.toText()) else return #err(#errNotFound("Failed to create actor search index for caller"));
+    let ?thisIndex = memKnownCanisters.get(thisPrincipal) else return #err(#errNotFound("Failed to retrieve index for this canister"));
 
     let user: User = {
       data = { name = ""; email = "" };
@@ -91,7 +89,7 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
     try {
       ignore switch ( await indexPrincipal.handlerSaveEntry({
         kind = #usersByPrincipal;
-        loc = { id = null; bucketHash = thisHash};
+        loc = { id = null; principal = ?caller; bucketHash = thisIndex};
         key = caller.toText()
       }) ) {
         case (#ok) ();
@@ -112,10 +110,34 @@ shared ({ caller }) actor class BucketUsers(mapping: ?Canisters.Mapping) = this 
   }) : async Result<(), Errors.HandlerErr> {
     let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
+    // Update data and create a checkpoint
     let updatedData = { user.data with name = name; email = email };
     let updatedUser = { user with data = updatedData; updatedAt = Time.now() };
 
     memUsers.add(caller, updatedUser);
+
+    // save in search canisters
+    if (name != user.data.name) {
+      let ?searchForNewName = createActorSearchIndexesFor(updatedData.name) else return #err(#errNotFound("Failed to create actor search index for caller"));
+      let ?searchForOldName = createActorSearchIndexesFor(user.data.name) else return #err(#errNotFound("Failed to create actor search index for old name"));
+    };
+
+    if (email != user.data.email) {
+      let ?searchForEmail = createActorSearchIndexesFor(caller.toText()) else return #err(#errNotFound("Failed to create actor search index for caller"));
+    };
+
+    try {
+      ignore switch ( await indexPrincipal.handlerSaveEntry({
+        kind = #usersByPrincipal;
+        loc = { id = null; principal = ?caller; bucketHash = thisIndex};
+        key = caller.toText()
+      }) ) {
+        case (#ok) ();
+        case (#err(e)) return #err(e);
+      };
+    } catch e {
+      return #err(#errInterCanisterCall("Failed to save entry in actor search index: " # e.message()));
+    };
 
     #ok
   };

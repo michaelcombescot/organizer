@@ -8,6 +8,7 @@ import Canisters "../../shared/Canisters";
 import { type Result } "mo:core/Result";
 import List "mo:core/List";
 import { type HandlerErr } "../../shared/Errors";
+import Loc "../../shared/Loc";
 
 shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
   let self = Principal.fromActor(this);
@@ -20,7 +21,7 @@ shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
       arg: Blob;
       caller : Principal;
       msg : {
-        #handlerGetBucketUsers : () -> ([Nat]);
+        #handlerGetBucketUsers : () -> (locs: [Loc.Loc]);
         #handlerGetSearchIndexes : () -> ();
         #handlerGetCurrentUserBucket : () -> ();
       } or InspectMapping;
@@ -36,14 +37,14 @@ shared ({ caller }) actor class IndexMain(mapping: ?Canisters.Mapping) = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetBucketUsers(indexes: [Nat]) : async Result<[Principal], HandlerErr> {
+  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.Loc]) : async Result<[Principal], HandlerErr> {
     if ( caller.isAnonymous() ) return #err(#errForbidden);
 
     let ?map = memMapping.get(#dynamic(#orderedByHash(#bucketUsers))) else return #err(#errNotFound("Failed to find mapping for bucket users"));
 
     let results = List.empty<Principal>();
-    for (index in indexes.values()) {
-      switch (map.get(index)) {
+    for (loc in locs.values()) {
+      switch (map.get(loc.bucketHash)) {
         case (?principal) results.add(principal);
         case null {};
       }

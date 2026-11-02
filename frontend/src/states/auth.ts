@@ -61,7 +61,7 @@ async function loadUserData() {
   }
 
   // Retrieve the current user data
-  let resUserData = await (await actorBucketUsersCurrent()).handlerGetUserData();
+  let resUserData = await (await actorBucketUsersCurrent()).handlerGetCurrentUserData();
   if (resUserData && "ok" in resUserData) {
     stateUserData.userData = resUserData.ok;
   } else {

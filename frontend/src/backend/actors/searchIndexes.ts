@@ -7,58 +7,58 @@ import { stateCanistersSearchIndexes } from "../../states/canisters";
 import { actorIndexMain } from "./indexMain";
 import { actorBucketUsers } from "./bucketUsers";
 
-export async function actorSearchIndexes(text: string) {
-  let hash = getIndexInRing(text);
+export class SearchIndexesActor {
+  private createActor(text: string) {
+    let hash = getIndexInRing(text);
 
-  let canisterId = getClosestEntry(stateCanistersSearchIndexes.value, hash)?.value;
-  if (!canisterId) {
-    throw new Error("No suitable canister found for the given text");
+    let canisterId = getClosestEntry(stateCanistersSearchIndexes.value, hash)?.value;
+    if (!canisterId) {
+      throw new Error("No suitable canister found for the given text");
+    }
+
+    const canisterEnv = safeGetCanisterEnv()!;
+    let principal = stateUserBucket.value;
+    if (!principal) {
+      throw new Error("User bucket is not set");
+    }
+
+    return createActor(canisterId, {
+      agentOptions: {
+        identity: stateIdentity.value,
+        rootKey: !import.meta.env.DEV ? canisterEnv.IC_ROOT_KEY : undefined,
+        shouldFetchRootKey: import.meta.env.DEV,
+      },
+    });
   }
 
-  const canisterEnv = safeGetCanisterEnv()!;
-  let principal = stateUserBucket.value;
-  if (!principal) {
-    throw new Error("User bucket is not set");
+  async searchUsersFromText(text: string) {
+    const actor = this.createActor(text);
+
+    // 1. Retrieve localisation of matched users
+    let resSearch = await actor.handlerPublicSearch({
+      limit: BigInt(50),
+      requests: { text: text, kinds: [ReqKind.usersByName, ReqKind.usersByEmail, ReqKind.usersByPrincipal] }
+    });
+    
+    if (resSearch && "err" in resSearch) {
+      throw new Error(`Search failed or returned no results: ${JSON.stringify(resSearch.err)}`);
+    }
+
+    const locs = resSearch.ok
+
+    if (locs.length === 0) {
+      return [];
+    }
+
+    // 2. Retrieve real bucket Principals
+    const buckets = await (await (actorIndexMain())).handlerGetBucketUsers(locs);
+    if (buckets && "err" in buckets) {
+      throw new Error(`Failed to get bucket users: ${JSON.stringify(buckets.err)}`);
+    }
+
+    // 3. Retrieve public data for each user in the buckets
+    const fetchPromises = buckets.ok.map(async (bucket) => (await actorBucketUsers(bucket)).handlerGetUsersPublicData([bucket]));
+
+    return await Promise.all(fetchPromises)
   }
-
-  return createActor(canisterId, {
-    agentOptions: {
-      identity: stateIdentity.value,
-      rootKey: !import.meta.env.DEV ? canisterEnv.IC_ROOT_KEY : undefined,
-      shouldFetchRootKey: import.meta.env.DEV,
-    },
-  });
-}
-
-export async function searchUsersFromText(text: string) {
-  const actor = await actorSearchIndexes(text);
-  let resSearch = await actor.handlerPublicSearch({
-    limit: BigInt(50),
-    requests: [[ReqKind.usersByName, text], [ReqKind.usersByEmail, text], [ReqKind.usersByPrincipal, text]] 
-  });
-  
-  if (resSearch && "err" in resSearch) {
-    throw new Error(`Search failed or returned no results: ${JSON.stringify(resSearch.err)}`);
-  }
-
-  const indexes = resSearch.ok.flatMap((loc) =>
-    loc.bucketHash
-  );
-
-  if (indexes.length === 0) {
-    throw new Error("No indexes found for the given text");
-  }
-
-  const buckets = await (await (actorIndexMain())).handlerGetBucketUsers(indexes);
-  if (buckets && "err" in buckets) {
-    throw new Error(`Failed to get bucket users: ${JSON.stringify(buckets.err)}`);
-  }
-
-  const fetchPromises = buckets.ok.map((bucket) => (await actorBucketUsers(bucket)).([bucket]));
-
-  const results = await Promise.all(fetchPromises);
-  if (results.length === 0) {
-    throw new Error("No results found for the given text");
-  }
-  return results;
 }

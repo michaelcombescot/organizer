@@ -150,7 +150,10 @@ export interface SearchIndexesInterface {
     }): Promise<Result>;
     handlerPublicSearch(arg0: {
         limit: bigint;
-        requests: Array<[ReqKind, string]>;
+        requests: {
+            text: string;
+            kinds: Array<ReqKind>;
+        };
     }): Promise<Result_1>;
     handlerSaveEntry(arg0: {
         key: string;
@@ -218,7 +221,10 @@ export class SearchIndexes implements SearchIndexesInterface {
     }
     async handlerPublicSearch(arg0: {
         limit: bigint;
-        requests: Array<[ReqKind, string]>;
+        requests: {
+            text: string;
+            kinds: Array<ReqKind>;
+        };
     }): Promise<Result_1> {
         const result = await this.actor.handlerPublicSearch(to_candid_record_n32(arg0));
         return from_candid_Result_1_n35(result);
@@ -613,14 +619,32 @@ function to_candid_record_n30(value: {
 }
 function to_candid_record_n32(value: {
     limit: bigint;
-    requests: Array<[ReqKind, string]>;
+    requests: {
+        text: string;
+        kinds: Array<ReqKind>;
+    };
 }): {
     limit: bigint;
-    requests: Array<[_ReqKind, string]>;
+    requests: {
+        text: string;
+        kinds: Array<_ReqKind>;
+    };
 } {
     return {
         limit: value.limit,
-        requests: to_candid_vec_n33(value.requests)
+        requests: to_candid_record_n33(value.requests)
+    };
+}
+function to_candid_record_n33(value: {
+    text: string;
+    kinds: Array<ReqKind>;
+}): {
+    text: string;
+    kinds: Array<_ReqKind>;
+} {
+    return {
+        text: value.text,
+        kinds: to_candid_vec_n34(value.kinds)
     };
 }
 function to_candid_record_n41(value: {
@@ -668,12 +692,6 @@ function to_candid_tuple_n2(value: [StaticKind, Principal]): [_StaticKind, Princ
         value[1]
     ];
 }
-function to_candid_tuple_n34(value: [ReqKind, string]): [_ReqKind, string] {
-    return [
-        to_candid_ReqKind_n31(value[0]),
-        value[1]
-    ];
-}
 function to_candid_tuple_n47(value: [CanisterKind, Array<[bigint, Principal]>]): [_CanisterKind, Array<[bigint, Principal]>] {
     return [
         to_candid_CanisterKind_n11(value[0]),
@@ -717,8 +735,8 @@ function to_candid_variant_n14(value: {
 function to_candid_vec_n1(value: Array<[StaticKind, Principal]>): Array<[_StaticKind, Principal]> {
     return value.map((x)=>to_candid_tuple_n2(x));
 }
-function to_candid_vec_n33(value: Array<[ReqKind, string]>): Array<[_ReqKind, string]> {
-    return value.map((x)=>to_candid_tuple_n34(x));
+function to_candid_vec_n34(value: Array<ReqKind>): Array<_ReqKind> {
+    return value.map((x)=>to_candid_ReqKind_n31(x));
 }
 function to_candid_vec_n46(value: Array<[CanisterKind, Array<[bigint, Principal]>]>): Array<[_CanisterKind, Array<[bigint, Principal]>]> {
     return value.map((x)=>to_candid_tuple_n47(x));

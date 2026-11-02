@@ -3,7 +3,6 @@ import Blob "mo:core/Blob";
 import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
 import MixinTopUpCycles "MixinTopUpCycles";
 import MixinNewCanisters "MixinNewCanisters";
-import MixinJobs "../../shared/mixins/MixinJobs";
 
 shared ({ caller = owner }) actor class Factory() = this {
   let thisPrincipal = Principal.fromActor(this);

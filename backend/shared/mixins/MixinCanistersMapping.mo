@@ -17,7 +17,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
   // ===== CONFIGS =====
 
   let STALE_MAPPING_THRESHOLD : Time.Time = 60_000_000_000; // 60 seconds
-  let MAX_MAPPING_INDEXES : Nat = 1_000_000_000; // Maximum number of indexes per canister kind
+  let MAX_MAPPING_INDEXES : Nat = 1_000_000_000_000; // Maximum number of indexes per canister kind
 
   // ===== TYPES =====
 
@@ -35,7 +35,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
     var currentVersion = 0;
     var lastVersionMaj = Time.now();
   };
-  let memKnownCanisters = Map.empty<Principal, ()>();
+  let memKnownCanisters = Map.empty<Principal, Nat>();
   let memMapping = Map.empty<Canisters.CanisterKind, Map.Map<Nat, Principal>>();
 
   // === Save and format Canisters memory ===
@@ -52,7 +52,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
       };
 
       map.add(0, principal);
-      memKnownCanisters.add(principal, ());
+      memKnownCanisters.add(principal, 0);
     };
   };
 
@@ -69,7 +69,7 @@ mixin ({ self: Principal; selfKind: Canisters.CanisterKind; mapping: ?Canisters.
 
       for ( (index, principal) in principals.values() ) {
         map.add(index, principal);
-        memKnownCanisters.add(principal, ());
+        memKnownCanisters.add(principal, index);
       };
     };
 

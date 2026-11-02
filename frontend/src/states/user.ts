@@ -1,11 +1,11 @@
 import { signal } from "@preact/signals";
 import { deepSignal } from 'deepsignal';
 import type { Principal } from "@icp-sdk/core/principal";
-import type { PublicUser } from "../backend/api/BucketUsers";
+import type { PrivateUser } from "../backend/api/BucketUsers";
 
 export let stateUserBucket = signal<Principal | null>();
 
-export const stateUserData = deepSignal<{userData: PublicUser}>({
+export const stateUserData = deepSignal<{userData: PrivateUser}>({
   userData: {
     name: "",
     email: "",

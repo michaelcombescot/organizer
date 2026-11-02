@@ -7,10 +7,10 @@ import Debug "mo:core/Debug";
 import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Iter "mo:core/Iter";
-import { type Job } "../../models/Job";
+import { type Job } "../Job";
 import { type HandlerErr } "../Errors";
 
-mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) {
+mixin<system>(useTimer: Bool, executeJob: (Job) -> async Result<(), Text>) {
   // ===== CONFIG =====
 
   let JOB_MAX_CONCURRENT = 250;
@@ -28,14 +28,13 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
 
   type InspectParamsMsgJobs = {
     #handlerCreateJob : (job: Job) -> ();
-    #handlerRequeueFailedJobImmediatly : () -> (jobId : Nat);
+    #handlerRequeueFailedJob : () -> (jobId : Nat);
     #handlerRequeueAllFailedJobs : () -> ();
     #handlerGetFailedJobs : () -> ();
   };
 
   // ===== MEMORY =====
   
-  var nextJobId = 0;
   let memJobs = Map.empty<Nat, JobWrapper>();
   let memJobRunning = Map.empty<Nat, ()>();
   let memJobFailed = Map.empty<Nat, JobWrapper>();
@@ -43,17 +42,15 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
   // ===== HELPERS =====
 
   func createJob(job: Job) : JobWrapper {
-    let jobId = nextJobId;
-
     var jobWrapper : JobWrapper = {
-      jobId = jobId;
+      jobId = memJobs.size();
       job = job;
       nbRetry = 0;
       retryAt = Time.now();
     };
     
     memJobs.add(jobWrapper.jobId, jobWrapper);
-    nextJobId += 1;
+
     jobWrapper
   };
 
@@ -103,15 +100,17 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
 
   // ===== TIMERS =====
 
-  ignore Timer.recurringTimer<system>(
-    #seconds(JOB_RETRY_DELAY), 
-    func () : async () {
-      
-      for ((jobId, jobWrapper) in memJobs.entries()) {
-        ignore processJob(jobWrapper);
-      };
-    }
-  );
+  if (useTimer) {
+    ignore Timer.recurringTimer<system>(
+      #seconds(JOB_RETRY_DELAY), 
+      func () : async () {
+        
+        for ((jobId, jobWrapper) in memJobs.entries()) {
+          ignore processJob(jobWrapper);
+        };
+      }
+    );
+  };
 
   // ===== HANDLERS =====
 
@@ -122,7 +121,7 @@ mixin<system>(recurringDelay: Nat, executeJob: (Job) -> async Result<(), Text>) 
     #ok(())
   };
 
-  public shared ({ caller }) func handlerRequeueFailedJobImmediatly(jobId: Nat) : async Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerRequeueFailedJob(jobId: Nat) : async Result<(), HandlerErr> {
     if (not caller.isController()) return #err(#errMustBeController);
 
     let ?failedJob = memJobFailed.get(jobId) else return #err(#errNotFound("Failed to find failed job with ID " # jobId.toText()));

@@ -59,7 +59,7 @@ export interface BucketUsersInterface {
     handlerGetCanistersOfKind(kind: CanisterKind): Promise<Array<Principal>>;
     handlerGetCurrentUserData(): Promise<Result_3>;
     handlerGetFullMapping(): Promise<Result_2>;
-    handlerGetUsersPublicData(principals: Array<Principal>): Promise<Result_1>;
+    handlerGetUsersPublicData(usersPrincipals: Array<Principal>): Promise<Result_1>;
     handlerUpdateMapping(mapping: Mapping): Promise<Result>;
     handlerUpdateUser(arg0: {
         name: string;

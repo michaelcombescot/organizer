@@ -18,7 +18,7 @@ mixin<system>({
   owner: Principal;
   thisPrincipal: Principal;
   memMapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>>;
-  memKnownCanisters: Map.Map<Principal, ()>;
+  memKnownCanisters: Map.Map<Principal, Nat>;
   memVersion: Canisters.Version;
   knownCanistersToMapping : () -> Canisters.Mapping;
   isKnownBasic : (Principal) -> Bool;
@@ -138,7 +138,7 @@ mixin<system>({
     };
 
     map.add(index, principal);
-    memKnownCanisters.add(principal, ());
+    memKnownCanisters.add(principal, index);
     memVersion.currentVersion := memVersion.currentVersion + 1;
     memVersion.lastVersionMaj := Time.now();
 

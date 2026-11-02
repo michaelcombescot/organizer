@@ -27,7 +27,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = thi
     arg : Blob;
     caller : Principal;
     msg : {
-      #handlerPublicSearch : () -> { requests: [(ReqKind.ReqKind, Text)]; limit: Nat };
+      #handlerPublicSearch : () -> { requests: {text: Text; kinds: [ReqKind.ReqKind]}; limit: Nat };
       #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text};
       #handlerLiberateEntry : () -> { kind: ReqKind.ReqKind; key: Text };
     } or InspectMapping;
@@ -43,28 +43,29 @@ shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = thi
   // ===== HANDLERS =====
 
   public query func handlerPublicSearch({
-    requests: [(ReqKind.ReqKind, Text)]; 
+    requests: {text: Text; kinds: [ReqKind.ReqKind]}; 
     limit: Nat
   }) : async Result.Result<[Loc.Loc], Errors.HandlerErr> {
-    if (requests.size() > 10) { return #err(#errBadRequest("Request size exceeds limit")) };
+    if (requests.kinds.size() > 10) { return #err(#errBadRequest("Request size exceeds limit")) };
     if ( limit > 20) { return #err(#errBadRequest("Limit exceeds maximum allowed value")) };
 
     let resp = List.empty<Loc.Loc>();
 
-    for ((kind, r) in requests.values()) {
+    for (kind in requests.kinds.values()) {
+      let r = requests.text;
       let ?map = memQuery.get(kind) else { continue };
 
       map
         .entriesFrom(r)
-        .map(func ((by, d)) { d })
+        .map(func ((_, d)) = d )
         .take(limit)
-        .forEach(func (d) { resp.add(d) });
+        .forEach(func (loc) = resp.add(loc));
     };
 
-    #ok(resp.toArray() : [Loc.Loc])
+    #ok(resp.toArray())
   };
 
-  public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text }) : async Result<(), Errors.HandlerErr> {
+  public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text; }) : async Result<(), Errors.HandlerErr> {
     if ( not (await isKnown(caller)) ) return #err(#errForbidden);
 
     let map = switch ( memQuery.get(kind) ) {
