@@ -14,6 +14,8 @@ module {
     #errIndexAlreadyExists; // used when an index entry already exists
     #errValidation: [ValidationErr];
     #errUpdateFailed: { field: Text };
+    #errJobExec: Text;
+    #errUpdateOngoing;
   };
 
   public type ValidationErr = {

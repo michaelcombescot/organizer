@@ -1,6 +1,7 @@
 import Text "mo:core/Text";
 import Order "mo:core/Order";
 import Time "mo:core/Time";
+import Map "mo:core/Map";
 
 module {
   public type CanisterKind = {
@@ -32,6 +33,8 @@ module {
   public type OrderedByTimeKind = {
     #indexMain; // main index canister, responsible for sequentially ordered data
   };
+
+  public type MemMapping = Map.Map<CanisterKind, Map.Map<Nat, Principal>>;
 
   public type Mapping = {
     version: Nat;

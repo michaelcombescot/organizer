@@ -9,7 +9,7 @@ import Timer "mo:core/Timer";
 import Debug "mo:core/Debug";
 import Iter "mo:core/Iter";
 import Errors "../../shared/Errors";
-import BucketUsers "../buckets/BucketUsers";
+import BucketUsers "../buckets/bucketUsers/BucketUsers";
 import SearchIndexes "../searches/SearchIndexes";
 import IndexMain "../indexes/IndexMain";
 import Interfaces "../../shared/Interfaces";

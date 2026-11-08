@@ -7,7 +7,7 @@ import Loc "../shared/Loc";
 module {
   public type User = {
     data: UserData;
-    groups: Map.Map<Loc.Loc, ()>;
+    groups: Map.Map<Loc.LocPerId, ()>;
     createdAt: Time.Time;
     updatedAt: Time.Time;
   };
@@ -34,7 +34,7 @@ module {
   public type PrivateUser = {
     name : Text;
     email : Text;
-    groups : [Loc.Loc];
+    groups : [Loc.LocPerId];
     createdAt : Time.Time;
     updatedAt : Time.Time;
   };

@@ -1,13 +1,16 @@
 import Principal "mo:core/Principal";
 import Blob "mo:core/Blob";
-import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
+import MixinCommon "../../shared/mixins/MixinCommon";
 import MixinTopUpCycles "MixinTopUpCycles";
 import MixinNewCanisters "MixinNewCanisters";
 
 shared ({ caller = owner }) actor class Factory() = this {
   let thisPrincipal = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #static(#factory); mapping = ?{ version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] } });
+  include MixinCommon({
+    thisPrincipal = thisPrincipal;
+    thisKind = #static(#factory); mapping = ?{ version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] };
+  });
   include MixinNewCanisters<system>({
     thisPrincipal = thisPrincipal;
     owner = owner;

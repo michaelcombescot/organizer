@@ -5,17 +5,16 @@ import List "mo:core/List";
 import Text "mo:core/Text";
 import Iter "mo:core/Iter";
 import Result "mo:core/Result";
-import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
+import MixinCommon "../../shared/mixins/MixinCommon";
 import { type HandlerErr } "../../shared/Errors";
-import Canisters "../../shared/Canisters";
 import { ReqKind } "../../shared/Req";
 import Loc "../../shared/Loc";
 import Errors "../../shared/Errors";
 
-shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = this {
+shared ({ caller }) actor class SearchIndexes() = this {
   let thisPrincipal = Principal.fromActor(this);
 
-  include MixinCanistersMapping({ self = thisPrincipal; selfKind = #dynamic(#orderedByHash(#searchIndexes)); mapping = mapping });
+  include MixinCommon({ thisPrincipal = thisPrincipal; thisKind = #dynamic(#orderedByHash(#searchIndexes)) });
 
   // ===== MEMORY =====
 
@@ -30,7 +29,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = thi
       #handlerPublicSearch : () -> { requests: {text: Text; kinds: [ReqKind.ReqKind]}; limit: Nat };
       #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text};
       #handlerLiberateEntry : () -> { kind: ReqKind.ReqKind; key: Text };
-    } or InspectMapping;
+    } or InspectCommon;
   };
 
   system func inspect(params: inspectParams) : Bool {
@@ -66,7 +65,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = thi
   };
 
   public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text; }) : async Result<(), Errors.HandlerErr> {
-    if ( not (await isKnown(caller)) ) return #err(#errForbidden);
+    switch ( await canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let map = switch ( memQuery.get(kind) ) {
       case (?m) m;
@@ -85,7 +84,7 @@ shared ({ caller }) actor class SearchIndexes(mapping: ?Canisters.Mapping) = thi
   };
 
   public shared ({ caller }) func handlerLiberateEntry({ kind: ReqKind.ReqKind; key: Text }) : async Result<(), Errors.HandlerErr> {
-    if ( not (await isKnown(caller)) ) return #err(#errForbidden);
+    switch ( await canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let ?map = memQuery.get(kind) else return #ok;    
     map.remove(key);

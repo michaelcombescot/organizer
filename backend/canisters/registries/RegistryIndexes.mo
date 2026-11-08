@@ -1,11 +1,11 @@
-import MixinCanistersMapping "../../shared/mixins/MixinCanistersMapping";
+import MixinCommon "../../shared/mixins/MixinCommon";
 import Principal "mo:core/Principal";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import Canisters "../../shared/Canisters";
 
 shared ({ caller }) actor class RegistryIndexes() = this {
-  include MixinCanistersMapping({ self = Principal.fromActor(this); selfKind = #static(#registryIndexes); mapping = ?{ version = 0; canisters = [] } });
+  include MixinCommon({ thisPrincipal = Principal.fromActor(this); thisKind = #static(#registryIndexes) });
 
   // ===== SYSTEM =====
 
@@ -14,7 +14,7 @@ shared ({ caller }) actor class RegistryIndexes() = this {
     caller : Principal;
     msg : {
       #handlerGetMainIndexes : () -> ();
-    } or InspectMapping;
+    } or InspectCommon;
   };
 
   system func inspect(params: inspectParams) : Bool {
