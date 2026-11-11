@@ -1,15 +1,11 @@
 module {
   public type Loc = {
-    #perId: LocPerId;
-    #perPrincipal: LocPerPrincipal;
+    bucket: Nat;
+    owner: LocOwner;
   };
 
-  public type LocPerId = {
-    id: Nat;
-    bucket: Nat;
-  };
-  public type LocPerPrincipal = {
-    principal: Principal;
-    bucket: Nat;
+  public type LocOwner = {
+    #id: Nat;
+    #principal: Principal;
   };
 }

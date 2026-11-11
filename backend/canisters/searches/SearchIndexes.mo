@@ -27,7 +27,7 @@ shared ({ caller }) actor class SearchIndexes() = this {
     caller : Principal;
     msg : {
       #handlerPublicSearch : () -> { requests: {text: Text; kinds: [ReqKind.ReqKind]}; limit: Nat };
-      #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text};
+      #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text};
       #handlerLiberateEntry : () -> { kind: ReqKind.ReqKind; key: Text };
     } or InspectCommon;
   };
@@ -64,7 +64,7 @@ shared ({ caller }) actor class SearchIndexes() = this {
     #ok(resp.toArray())
   };
 
-  public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text; }) : async Result<(), Errors.HandlerErr> {
+  public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text }) : async Result<(), Errors.HandlerErr> {
     switch ( await canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let map = switch ( memQuery.get(kind) ) {
@@ -75,18 +75,20 @@ shared ({ caller }) actor class SearchIndexes() = this {
         newMap
       }
     };
-    
+      
     if ( map.containsKey(key) ) return #err(#errIndexAlreadyExists);
 
-    map.add(key, loc);
-    
-    #ok
+    let ?callerIndex = memKnownCanisters.get(caller) else return #err(#errNotFound("Caller is not a known canister"));
+
+    map.add(key, { bucket = callerIndex; owner = owner });
+
+    #ok(());
   };
 
   public shared ({ caller }) func handlerLiberateEntry({ kind: ReqKind.ReqKind; key: Text }) : async Result<(), Errors.HandlerErr> {
     switch ( await canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
-    let ?map = memQuery.get(kind) else return #ok;    
+    let ?map = memQuery.get(kind) else { return #ok };
     map.remove(key);
 
     #ok

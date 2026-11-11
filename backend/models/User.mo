@@ -6,8 +6,9 @@ import Loc "../shared/Loc";
 
 module {
   public type User = {
-    data: UserData;
-    groups: Map.Map<Loc.LocPerId, ()>;
+    name: Text;
+    email: Text;
+    groups: Map.Map<Loc.LocOwner, ()>;
     createdAt: Time.Time;
     updatedAt: Time.Time;
   };
@@ -26,23 +27,23 @@ module {
   public func toPublic(self : User, principal: Principal) : PublicUser {
     {
       principal = principal;
-      name = self.data.name;
-      email = self.data.email;
+      name = self.name;
+      email = self.email;
     };
   };
 
   public type PrivateUser = {
     name : Text;
     email : Text;
-    groups : [Loc.LocPerId];
+    groups : [Loc.LocOwner];
     createdAt : Time.Time;
     updatedAt : Time.Time;
   };
 
   public func toPrivate(self : User) : PrivateUser {
     {
-      name = self.data.name;
-      email = self.data.email;
+      name = self.name;
+      email = self.email;
       groups = self.groups.keys().toArray();
       createdAt = self.createdAt;
       updatedAt = self.updatedAt;

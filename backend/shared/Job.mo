@@ -1,4 +1,5 @@
-import { type LocPerId; type LocPerPrincipal } "Loc";
+import { type LocOwner } "Loc";
+import { ReqUser = { type ReqUser } } "Req";
 
 module {
   public type Job = {
@@ -6,11 +7,7 @@ module {
   };
 
   public type JobBucketUsers = {
-    #addPrincipalSearch: { newPrincipal: Principal; loc: LocPerPrincipal };
-    #addNameSearch: { newName: Text; loc: LocPerPrincipal};
-    #addEmailSearch: { newEmail: Text; loc: LocPerPrincipal};
-    #removePrincipalSearch: { oldPrincipal: Principal; };
-    #removeOldNameSearch: { oldName: Text; };
-    #removeOldEmailSearch: { oldEmail: Text; };
+    #updateUserIndex: {kind: ReqUser; key: Text; owner: LocOwner };
+    #removeUserIndex: {kind: ReqUser; key: Text; };
   };
 }

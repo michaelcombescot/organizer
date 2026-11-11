@@ -27,7 +27,6 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
 
   type InspectCommon = {
     #handlerGetFullMapping : () -> ();
-    #handlerFetchAndUpdateMapping : () -> ();
     #handlerUpdateMapping : () -> (mapping: Canisters.Mapping);
     #handlerAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
   };

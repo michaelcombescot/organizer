@@ -30,7 +30,7 @@ mixin<system>({
     error: ?HandlerErr
   };
 
-  type InspectParamsMsgJobs = {
+  type InspectJobs = {
     #handlerCreateAndProcessJob : (job: Job) -> ();
     #handlerRequeueFailedJob : () -> (jobId : Nat);
     #handlerRequeueAllFailedJobs : () -> ();
@@ -66,7 +66,7 @@ mixin<system>({
     jobWrapper
   };
 
-  func createAndExecuteJob({job: Job; allowRetry: Bool}) : async Result<(), HandlerErr> {
+  func createAndExecuteJob(job: Job) : async Result<(), HandlerErr> {
     let jobWrapper = createJob(job);
     let resp = switch (await executeJob(job)) {
       case (#ok(())) #ok;
@@ -91,7 +91,7 @@ mixin<system>({
     if (Time.now() < jobWrapper.retryAt) return;
 
     memJobRunning.add(jobWrapper.jobId, ());
-
+    
     ignore async {
       try {
         switch (await executeJob(jobWrapper.job)) {

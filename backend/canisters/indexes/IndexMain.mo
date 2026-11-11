@@ -21,7 +21,7 @@ shared ({ caller }) actor class IndexMain() = this {
       arg: Blob;
       caller : Principal;
       msg : {
-        #handlerGetBucketUsers : () -> (locs: [Loc.LocPerPrincipal]);
+        #handlerGetBucketUsers : () -> (locs: [Loc.Loc]);
         #handlerGetSearchIndexes : () -> ();
         #handlerGetCurrentUserBucket : () -> ();
       } or InspectCommon;
@@ -37,7 +37,7 @@ shared ({ caller }) actor class IndexMain() = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.LocPerPrincipal]) : async Result<[Principal], HandlerErr> {
+  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.Loc]) : async Result<[Principal], HandlerErr> {
     if ( updateMappingOngoing ) return #err(#errUpdateOngoing);
     if ( caller.isAnonymous() ) return #err(#errForbidden);
 
@@ -49,6 +49,7 @@ shared ({ caller }) actor class IndexMain() = this {
         case (?principal) results.add(principal);
         case null {};
       }
+      
     };
 
     #ok(results.toArray());

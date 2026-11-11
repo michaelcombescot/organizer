@@ -20,75 +20,27 @@ mixin({
     switch (job) {
       case (#jobBucketUsers(j)) {
         switch (j) {
-          case (#addPrincipalSearch(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.newPrincipal.toText()) else return #err(#errNotFound("Failed to create actor search index for caller"));
+          case (#updateUserIndex(d)) {
+            let ?actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
             try {
-              switch ( await actorSearch.handlerSaveEntry({kind = #usersByPrincipal; loc = #perPrincipal(d.loc); key = d.newPrincipal.toText()})) {
-                case (#ok(result)) #ok;
+              switch ( await actorSearch.handlerSaveEntry({kind = #reqUsers(#usersByPrincipal); owner = d.owner; key = d.key})) {
+                case (#ok(())) #ok;
                 case (#err(e)) #err(e);
               };
             } catch e {
               #err(#errInterCanisterCall("Failed to save entry"))
             }
           };
-          case (#removePrincipalSearch(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.oldPrincipal.toText()) else return #err(#errNotFound("Failed to create actor search index for caller"));
+          case (#removeUserIndex(d)) {
+            let ?actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
             try {
-              switch ( await actorSearch.handlerLiberateEntry({kind = #usersByPrincipal; key = d.oldPrincipal.toText()})) {
+              switch ( await actorSearch.handlerLiberateEntry({kind = #reqUsers(#usersByPrincipal); key = d.key})) {
                 case (#ok(result)) #ok;
                 case (#err(e)) #err(e);
               };
               
-            } catch e {
-              #err(#errInterCanisterCall("Failed to liberate entry"))
-            }
-          };
-          case (#addNameSearch(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.newName) else return #err(#errNotFound("Failed to create actor search index for caller"));
-
-            try {
-              switch ( await actorSearch.handlerSaveEntry({kind = #usersByName; loc = #perPrincipal(d.loc); key = d.newName})) {
-                case (#ok(result)) #ok;
-                case (#err(e)) #err(e);
-              };
-            } catch e {
-              #err(#errInterCanisterCall("Failed to save entry"))
-            }
-          };
-          case (#removeOldNameSearch(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.oldName) else return #err(#errNotFound("Failed to create actor search index for caller"));
-
-            try {
-              switch ( await actorSearch.handlerLiberateEntry({kind = #usersByName; key = d.oldName})) {
-                case (#ok(result)) #ok;
-                case (#err(e)) #err(e);
-              };
-            } catch e {
-              #err(#errInterCanisterCall("Failed to liberate entry"))
-            }
-          };
-          case (#addEmailSearch(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.newEmail) else return #err(#errNotFound("Failed to create actor search index for caller"));
-
-            try {
-              switch ( await actorSearch.handlerSaveEntry({kind = #usersByEmail; loc = #perPrincipal(d.loc); key = d.newEmail})) {
-                case (#ok(result)) #ok;
-                case (#err(e)) #err(e);
-              };
-            } catch e {
-              #err(#errInterCanisterCall("Failed to save entry"))
-            }
-          };
-          case (#removeOldEmailSearch(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.oldEmail) else return #err(#errNotFound("Failed to create actor search index for caller"));
-
-            try {
-              switch ( await actorSearch.handlerLiberateEntry({kind = #usersByEmail; key = d.oldEmail})) {
-                case (#ok(result)) #ok;
-                case (#err(e)) #err(e);
-              };
             } catch e {
               #err(#errInterCanisterCall("Failed to liberate entry"))
             }

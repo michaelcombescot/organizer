@@ -14,7 +14,7 @@ module Interfaces {
   };
 
   public type ActorSearchIndexes = actor {
-    handlerSaveEntry : shared {kind: ReqKind.ReqKind; loc: Loc.Loc; key: Text} -> async Result<(), Errors.HandlerErr>;
-    handlerLiberateEntry : shared { kind: ReqKind.ReqKind; key: Text } -> async Result<(), Errors.HandlerErr>;
+    handlerSaveEntry : shared ({kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text}) -> async Result<(), Errors.HandlerErr>;
+    handlerLiberateEntry : shared ({ kind: ReqKind.ReqKind; key: Text }) -> async Result<(), Errors.HandlerErr>;
   };
 };

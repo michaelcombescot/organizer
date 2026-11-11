@@ -29,7 +29,7 @@ shared ({ caller }) actor class BucketUsers() = this {
   });
   include MixinJobs<system>({
     useTimer = true;
-    timerRetryDelaySeconds = null;
+    timerRetryDelayNs = null;
     executeJob = executeJob;
   });
   
@@ -39,7 +39,8 @@ shared ({ caller }) actor class BucketUsers() = this {
 
   // ===== MEMORY =====
 
-  let memUsers = Map.empty<Principal, User>();
+  let memGuards = Map.empty<Principal, User>();
+  let memOngoingUpdate = Map.empty<Principal, ()>();
 
   // ===== SYSTEM =====
 
@@ -52,7 +53,7 @@ shared ({ caller }) actor class BucketUsers() = this {
       #handlerCreateUser : () -> ();
       #handlerDeleteUser : () -> ();
       #handlerUpdateUser : () -> {email : Text; name : Text; }
-    } or InspectCommon;
+    } or InspectCommon or InspectJobs;
   };
 
   system func inspect(params: InspectParams) : Bool {
@@ -70,7 +71,7 @@ shared ({ caller }) actor class BucketUsers() = this {
 
     let users = List.empty<PublicUser>();
     for (p in usersPrincipals.values()) {
-      let ?user = memUsers.get(p) else return #err(#errNotFound("User not found"));
+      let ?user = memGuards.get(p) else return #err(#errNotFound("User not found"));
       users.add(user.toPublic(p));
     };
 
@@ -80,31 +81,43 @@ shared ({ caller }) actor class BucketUsers() = this {
   public query ({ caller }) func handlerGetCurrentUserData() : async Result<PrivateUser, Errors.HandlerErr> {
       if ( caller.isAnonymous() ) return #err(#errForbidden);
 
-      let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
+      let ?user = memGuards.get(caller) else return #err(#errNotFound("User not found"));
 
       #ok(user.toPrivate());
   };
 
   public shared ({ caller }) func handlerCreateUser() : async Result<(), Errors.HandlerErr> {
     if ( caller.isAnonymous() ) return #err(#errForbidden);
-    if ( memUsers.size() >= MAX_NUMBER_USERS ) return #err(#errMemoryLimitReached);
+    if ( memGuards.size() >= MAX_NUMBER_USERS ) return #err(#errMemoryLimitReached);
 
-    if ( memUsers.containsKey(caller) ) return #err(#errValidation([#alreadyExists { field = "caller" }]));
+    if ( memGuards.containsKey(caller) ) return #err(#errValidation([#alreadyExists { field = "caller" }]));
 
-    let user: User = {
-      data = { name = ""; email = "" };
-      groups = Map.empty<Loc.LocPerId, ()>();
-      createdAt = Time.now();
-      updatedAt = Time.now();
-    };
-
-    let job = #jobBucketUsers(#addPrincipalSearch({ newPrincipal = caller; loc = { id = null; principal = ?caller; bucketHash = thisIndex}; })); 
-    switch (executeJob(job)) {
-      case (#ok) ();
+    switch (aquireGuard(caller)) {
+      case (#ok(())) ();
       case (#err(e)) return #err(e);
     };
 
-    memUsers.add(caller, user);
+    try {
+      let job = #jobBucketUsers(#addPrincipalSearch({ newPrincipal = caller; owner = #principal(caller) })); 
+      switch (await executeJob(job)) {
+        case (#ok(())) ();
+        case (#err(e)) {
+          memGuards.remove(caller);
+          return #err(e);
+        };
+      };
+
+      let user: User = {
+        data = { name = ""; email = "" };
+        groups = Map.empty<Loc.LocOwner, ()>();
+        createdAt = Time.now();
+        updatedAt = Time.now();
+      };
+
+      memGuards.add(caller, user);
+    } finally {
+      memOngoingUpdate.remove(caller);
+    };
 
     #ok
   };
@@ -113,22 +126,95 @@ shared ({ caller }) actor class BucketUsers() = this {
     name: Text;
     email: Text
   }) : async Result<(), Errors.HandlerErr> {
-    let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
+    let ?user = memGuards.get(caller) else return #err(#errNotFound("User not found"));
 
-    // Update data and create a checkpoint
-    let updatedData = { user.data with name = name; email = email };
-    let updatedUser = { user with data = updatedData; updatedAt = Time.now() };
+    switch (acquireGuard(caller)) {
+      case (#ok(())) ();
+      case (#err(e)) return #err(e);
+    };
 
-    memUsers.add(caller, updatedUser);
+    try {
+      let updatedUser = { user with updatedAt = Time.now() };
+
+      // Save indexes
+
+      let jobIndexName = #jobBucketUsers(#addNameSearch({ newName = updatedUser.name; owner = #principal(caller) }));
+      let futureName = executeJob(jobIndexName);
+
+      let jobIndexEmail = #jobBucketUsers(#addEmailSearch({ newEmail = updatedUser.email; owner = #principal(caller) }));
+      let futureEmail = executeJob(jobIndexEmail);
+      
+      let errors = List.empty<Errors.ValidationErr>();
+
+      if ( user.name != name ) {
+        switch ( await futureName ) {
+          case (#ok(())) { updatedUser := { updatedUser with name } };
+          case (#err(e)) {
+            if ( e != #errIndexAlreadyExists ) return #err(e);
+            errors.add(#alreadyExists { field = "name" });
+          };
+        };
+      };
+
+      if ( user.email != email ) {
+        switch ( await futureEmail ) {
+          case (#ok(())) { updatedUser := { updatedUser with email } };
+          case (#err(e)) {
+            if ( e != #errIndexAlreadyExists ) return #err(e);
+            errors.add(#alreadyExists { field = "email" });
+          };
+        };
+      };
+
+      if ( not errors.isEmpty() ) return #err(#errValidation(errors));
+
+      // save user
+      memGuards.add(caller, updatedUser);  
+    } finally {
+      memOngoingUpdate.remove(caller);
+    };
 
     #ok
   };
 
   public shared ({ caller }) func handlerDeleteUser() : async Result<(), Errors.HandlerErr> {
-    if ( not memUsers.containsKey(caller) ) return #err(#errNotFound("User not found"));
+    let ?user = memGuards.get(caller) else return #err(#errNotFound("User not found"));
 
-    memUsers.remove(caller);
+    try {
+      switch ( await createAndExecuteJob(#jobBucketUsers(#removePrincipalSearch({ principal = caller;}))) ) {
+        case (#ok(())) ();
+        case (#err(e)) return #err(e);
+      };
+
+      switch ( await createAndExecuteJob(#jobBucketUsers(#removeNameSearch({ name = user.data.name }))) ) {
+        case (#ok(())) ();
+        case (#err(e)) return #err(e);
+      };
+
+      switch ( await createAndExecuteJob(#jobBucketUsers(#removeEmailSearch({ email = user.data.email }))) ) {
+        case (#ok(())) ();
+        case (#err(e)) return #err(e);
+      };
+
+      memGuards.remove(caller);
+    } finally {
+      releaseGuard(caller);
+    };
 
     #ok
   };
-};
+
+
+  // ===== HELPERS =====
+
+  func aquireGuard(caller: Principal) : Result<(), Errors.HandlerErr> {
+    switch (memGuards.get(caller)) {
+      case (?()) #ok;
+      case (#none) memGuards.add(caller, ());
+    }
+  };
+
+  func releaseGuard(caller: Principal) {
+    memGuards.remove(caller);
+  };
+}
