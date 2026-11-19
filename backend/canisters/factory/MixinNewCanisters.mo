@@ -1,20 +1,18 @@
 import Nat "mo:core/Nat";
 import Error "mo:core/Error";
+import Job "../../shared/Job";
 import { type Result } "mo:core/Result";
 import Canisters "../../shared/Canisters";
 import Result "mo:core/Result";
 import Principal "mo:core/Principal";
 import Map "mo:core/Map";
 import Time "mo:core/Time";
-import Timer "mo:core/Timer";
-import Debug "mo:core/Debug";
 import Iter "mo:core/Iter";
 import Errors "../../shared/Errors";
 import { type HandlerErr } "../../shared/Errors";
 import BucketUsers "../buckets/bucketUsers/BucketUsers";
 import SearchIndexes "../searches/SearchIndexes";
 import IndexMain "../indexes/IndexMain";
-import Interfaces "../../shared/Interfaces";
 
 mixin<system>({
   owner: Principal;
@@ -22,12 +20,10 @@ mixin<system>({
   memMapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>>;
   memKnownCanisters: Map.Map<Principal, Nat>;
   memVersion: Canisters.Version;
-  knownCanistersToMapping : () -> Canisters.Mapping;
   canAccess : (Principal) -> async Result<(), HandlerErr>;
+  createAndExecuteJob : (job: Job.Job) -> async Result.Result<(), HandlerErr>;
 }) {
   // ===== CONFIGS =====
-
-  let TIMER_RETRY_JOBS = 10; // Timer interval in minutes
 
   func confGetNewCanisterNbCycles (kind: Canisters.DynamicKind) : Nat {
     switch (kind) {
@@ -45,14 +41,6 @@ mixin<system>({
     };
   };
 
-  // ===== TYPES =====
-
-  type InspectCreateCanisters = {
-    #handlerCreateOrderedByTimeCanister : () -> (kind: Canisters.OrderedByTimeKind);
-    #handlerCreateOrderedByHashCanister : () -> (kind: Canisters.OrderedByHashKind, index: Nat);
-    #handlerGetJobs : () -> ();
-  };
-
   // ===== MEMORY =====
 
   let memJobsSendMapping = Map.empty<Principal, ()>();
@@ -61,25 +49,7 @@ mixin<system>({
 
   func sendMappingToAll() : async () {
     for (target in memKnownCanisters.keys()) {
-      memJobsSendMapping.add(target, ());
-
-      ignore async {
-        await sendMappingTo(target);
-      };
-    };
-  };
-
-  func sendMappingTo(target: Principal) : async () {
-    try {
-      let actorTarget = actor(target.toText()) : Interfaces.ActorReceiveMapping;
-      switch (await actorTarget.handlerUpdateMapping(knownCanistersToMapping())) {
-        case (#ok(_)) memJobsSendMapping.remove(target);
-        case (#err(e)) {
-          Debug.print("Failed to send mapping to target canister: " # debug_show(e));
-        };
-      };
-    } catch e {
-      Debug.print("Exception occurred while sending mapping to target canister: " # e.message());
+      ignore createAndExecuteJob(#jobFactory(#sendMappingTo(target)));
     };
   };
 
@@ -195,17 +165,8 @@ mixin<system>({
   };
 
   public query ({ caller }) func handlerGetJobs() : async [Principal] {
-    if ( caller.isAnonymous() ) return [];
+    if ( caller.isController() ) return [];
 
     memJobsSendMapping.keys().toArray()
   };
-
-  // ===== JOBS =====
-
-  // Job to retry mapping diffusion
-  ignore Timer.recurringTimer<system>(#minutes(TIMER_RETRY_JOBS), func () : async () {
-    for (target in memJobsSendMapping.keys()) {
-      ignore sendMappingTo(target);
-    };
-  });
 }

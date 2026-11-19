@@ -17,22 +17,8 @@ shared ({ caller }) actor class IndexMain() = this {
 
   // ===== SYSTEM =====
 
-  type InspectParams = {
-      arg: Blob;
-      caller : Principal;
-      msg : {
-        #handlerGetBucketUsers : () -> (locs: [Loc.Loc]);
-        #handlerGetSearchIndexes : () -> ();
-        #handlerGetCurrentUserBucket : () -> ();
-      } or InspectCommon;
-  };
-
-  system func inspect(params: InspectParams) : Bool {
-      if ( params.caller.isAnonymous() ) { return false; };
-
-      if ( Blob.size(params.arg) > 5000 ) { return false; };
-
-      return true
+  system func inspect({ arg : Blob; caller : Principal }) : Bool {
+    inspectBasic({arg = arg; caller = caller; maxArgSize = 1000})
   };
 
   // ===== HANDLERS =====

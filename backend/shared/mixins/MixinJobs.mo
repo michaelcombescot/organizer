@@ -11,13 +11,13 @@ import { type HandlerErr } "../Errors";
 
 mixin<system>({
   useTimer: Bool;
-  timerRetryDelayNs: ?Nat;
+  timerRetryDelayNs: ?Nat; // Optionnal, default to once a day
   executeJob: (Job) -> async Result<(), HandlerErr>
 }) {
   // ===== CONFIG =====
 
   let JOB_MAX_CONCURRENT = 250;
-  let JOB_RETRY_DELAY_NS = switch (timerRetryDelayNs) { case (?d) d; case null 60_000_000_000 };
+  let JOB_RETRY_DELAY_NS = switch (timerRetryDelayNs) { case (?d) d; case null 86_400_000_000_000 };
   let JOB_MAX_RETRY = 3;
 
   // ===== STRUCTURES =====
@@ -28,13 +28,6 @@ mixin<system>({
     nbRetry: Nat;
     retryAt: Time.Time;
     error: ?HandlerErr
-  };
-
-  type InspectJobs = {
-    #handlerCreateAndProcessJob : () -> (job: Job);
-    #handlerRequeueFailedJob : () -> (jobId : Nat);
-    #handlerRequeueAllFailedJobs : () -> ();
-    #handlerGetFailedJobs : () -> ();
   };
 
   // ===== MEMORY =====
@@ -148,7 +141,7 @@ mixin<system>({
 
   if (useTimer) {
     ignore Timer.recurringTimer<system>(
-      #seconds(JOB_RETRY_DELAY_NS / 1_000_000_000), 
+      #nanoseconds(JOB_RETRY_DELAY_NS), 
       processAllJobs
     );
   };

@@ -43,23 +43,8 @@ shared ({ caller }) actor class BucketUsers() = this {
 
   // ===== SYSTEM =====
 
-  type InspectParams = {
-    arg: Blob;
-    caller : Principal;
-    msg : {
-      #handlerGetUsersPublicData : () -> (usersPrincipals: [Principal]);
-      #handlerGetCurrentUserData : () -> ();
-      #handlerCreateUser : () -> ();
-      #handlerDeleteUser : () -> ();
-      #handlerUpdateUser : () -> {email : Text; name : Text; }
-    } or InspectCommon or InspectJobs;
-  };
-
-  system func inspect(params: InspectParams) : Bool {
-      if ( params.caller == Principal.anonymous() ) { return false };
-      if ( Blob.size(params.arg) > 1000 ) { return false };
-
-      true;
+  system func inspect({ arg : Blob; caller : Principal }) : Bool {
+      inspectBasic({arg = arg; caller = caller; maxArgSize = 1000})
   };
 
   // ===== HANDLERS =====

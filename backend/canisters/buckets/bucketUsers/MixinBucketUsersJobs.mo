@@ -9,7 +9,7 @@ import { type ActorSearchIndexes } "../../../shared/Interfaces";
 mixin({
   thisPrincipal: Principal;
   memKnownCanisters: Map.Map<Principal, Nat>;
-  createActorSearchIndexesFor: (text: Text) -> ?ActorSearchIndexes;
+  createActorSearchIndexesFor: (text: Text) -> Result<ActorSearchIndexes, HandlerErr>;
 }) {
   func thisIndex () : Result<Nat, HandlerErr> {
     let ?index = memKnownCanisters.get(thisPrincipal) else return #err(#errNotFound("Failed to retrieve index for this canister"));
@@ -21,7 +21,7 @@ mixin({
       case (#jobBucketUsers(j)) {
         switch (j) {
           case (#updateUserIndex(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
+            let #ok actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
             try {
               switch ( await actorSearch.handlerSaveEntry({kind = #reqUsers(#usersByPrincipal); owner = d.owner; key = d.key})) {
@@ -33,7 +33,7 @@ mixin({
             }
           };
           case (#removeUserIndex(d)) {
-            let ?actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
+            let #ok actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
             try {
               switch ( await actorSearch.handlerLiberateEntry({kind = #reqUsers(#usersByPrincipal); key = d.key})) {
@@ -46,6 +46,9 @@ mixin({
             }
           };
         };
+      };
+      case (_) {
+        #err(#errJobExec("Unknown job type"));
       };
     };
   };

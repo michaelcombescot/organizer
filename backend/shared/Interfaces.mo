@@ -5,7 +5,7 @@ import Loc "Loc";
 import Canisters "Canisters";
 
 module Interfaces {
-  public type ActorReceiveMapping = actor {
+  public type ActorUpdateMapping = actor {
     handlerUpdateMapping : shared (mapping: Canisters.Mapping) -> async Result<(), Errors.HandlerErr>;
   };
 

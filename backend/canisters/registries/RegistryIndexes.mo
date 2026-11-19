@@ -9,19 +9,8 @@ shared ({ caller }) actor class RegistryIndexes() = this {
 
   // ===== SYSTEM =====
 
-  type inspectParams = {
-    arg : Blob;
-    caller : Principal;
-    msg : {
-      #handlerGetMainIndexes : () -> ();
-    } or InspectCommon;
-  };
-
-  system func inspect(params: inspectParams) : Bool {
-    if ( params.caller.isAnonymous() ) return false;
-    if ( params.arg.size() > 5000 ) return false;
-
-    true
+  system func inspect({ arg : Blob; caller : Principal }) : Bool {
+    inspectBasic({arg = arg; caller = caller; maxArgSize = 100})
   };
 
   // ===== HANDLERS =====

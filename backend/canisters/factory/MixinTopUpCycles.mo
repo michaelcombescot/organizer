@@ -7,7 +7,7 @@ import Canisters "../../shared/Canisters";
 import Errors "../../shared/Errors";
 import { ic } "mo:ic";
 
-mixin<system>(memMapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>>) {
+mixin<system>({ memMapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Principal>> }) {
   // ===== CONFIGS =====
 
   let TIMER_TOP_UP_CYCLES = 1; // Timer interval in hours

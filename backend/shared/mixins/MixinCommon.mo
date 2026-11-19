@@ -10,6 +10,7 @@ import List "mo:core/List";
 import Time "mo:core/Time";
 import Debug "mo:core/Debug";
 import Result "mo:core/Result";
+import Blob "mo:core/Blob";
 import { type HandlerErr } "../Errors";
 import { type ActorSearchIndexes; type ActorFactory; } "../Interfaces";
 
@@ -22,16 +23,6 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
   let MAX_MAPPING_INDEXES : Nat = 1_000_000_000_000; // Maximum number of indexes per canister kind
 
   //////
-  // ===== TYPES =====
-  //////
-
-  type InspectCommon = {
-    #handlerGetFullMapping : () -> ();
-    #handlerUpdateMapping : () -> (mapping: Canisters.Mapping);
-    #handlerAddStaticCanisters : () -> (canisters: [(Canisters.StaticKind, Principal)]);
-  };
-
-  //////
   // ===== MEMORY =====
   //////
 
@@ -39,7 +30,7 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
   var updateOngoing = false;
 
   // Mapping
-  var updateMappingOngoing = true;
+  var updateMappingOngoing = false;
   var memVersion: Canisters.Version = {
     var currentVersion = 0;
     var lastVersionMaj = Time.now();
@@ -78,14 +69,12 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
     // prevent a malicious canister to spam the network with repeated fetch requests when the mapping is stale
     if ( memVersion.lastVersionMaj < Time.now() - STALE_MAPPING_THRESHOLD ) return #ok;
 
-    updateMappingOngoing := true;
-
-    let ?factory = findFactory() else {
+    let #ok actorFactory = createActorFactory() else {
       updateMappingOngoing := false;
-      return #err(#errNotFound("Factory not found in mapping"));
+      return #err(#errNotFound("Failed to create actor for factory"));
     };
-
-    let actorFactory = actor(factory.toText()) : ActorFactory;
+    
+    updateMappingOngoing := true;
 
     try {
       switch ( await actorFactory.handlerGetFullMapping() ) {
@@ -98,13 +87,14 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
       };
     } catch e {
       Debug.print("Error fetching full mapping: " # e.message());
+    } finally {
+      updateMappingOngoing := false;
     };
-    
-    updateMappingOngoing := false;
-    #ok;
+
+    #ok
   };
 
-  func knownCanistersToMapping() : Canisters.Mapping {
+  func mappingToPublic() : Canisters.Mapping {
     let result = List.empty<(Canisters.CanisterKind, [(Nat, Principal)])>();
 
     for ( (kind, map) in memMapping.entries() ) {
@@ -112,6 +102,16 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
     };
 
     { version = memVersion.currentVersion; canisters = result.toArray() }
+  };
+
+  /////
+  // ===== INSPECT VERIFICATIONS  =====
+  /////
+
+  func inspectBasic({caller: Principal; arg: Blob.Blob; maxArgSize: Nat}) : Bool {
+    if ( caller.isAnonymous() ) return false;
+    if (arg.size() > maxArgSize) return false;
+    true
   };
 
   //////
@@ -171,10 +171,25 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
   // ===== Find canister helpers =====
   //////
 
-  func findFactory() : ?Principal {
-    let ?factories = memMapping.get(#static(#factory)) else return null;
-    factories.get(0)
+  // ACTORS CREATION
+
+  func createActorFactory() : Result<ActorFactory, HandlerErr> {
+    let principal = switch ( memMapping.get(#static(#factory)) ) {
+      case (?factories) {
+        switch (factories.get(0)) { case (?p) p; case null return #err(#errNotFound("No factories found in mapping")); };
+      };
+      case null return #err(#errNotFound("No factories found in mapping"));
+    };
+
+    #ok(actor(principal.toText()) : ActorFactory)
   };
+
+  func createActorSearchIndexesFor(text: Text) : Result<ActorSearchIndexes, HandlerErr> {
+    let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#searchIndexes)), text) else return #err(#errNotFound("No search index found for the given text"));
+    #ok(actor(principal.toText()) : ActorSearchIndexes)
+  };
+
+  // HELPERS TO FIND A CANISTER IN THE MAPPING
 
   func findCanisterFromText(kind: Canisters.CanisterKind, text: Text) : ?Principal {
     let ?map = memMapping.get(kind) else return null;
@@ -198,11 +213,6 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
     }
   };
 
-  func createActorSearchIndexesFor(text: Text) : ?ActorSearchIndexes {
-    let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#searchIndexes)), text) else return null;
-    ?(actor(principal.toText()) : ActorSearchIndexes)
-  };
-
   ////// 
   // ===== API =====
   //////
@@ -212,7 +222,7 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
   public query ({ caller }) func handlerGetFullMapping() : async Result.Result<Canisters.Mapping, HandlerErr> {
     switch ( canAccessBasic(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
-    #ok(knownCanistersToMapping())
+    #ok(mappingToPublic())
   };
 
   // Handler called by the factory when a new dynamic canister is created.

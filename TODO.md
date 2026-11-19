@@ -1,6 +1,4 @@
-- Reste à faire la création d'un nouvel user
-- + petite reflexion sur l'intérêt de l'admin: a priori les updates je les fait depuis la console en recupérant le mapping
-- + petite reflexion sur la creation de nouveau bucket quand on va attaquer les groupes
+- passer le mini job de la factory pour envoyer le mapping lors de la création d'un canister sur le mixin
 
 
 to know:

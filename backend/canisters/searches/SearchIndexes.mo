@@ -22,21 +22,8 @@ shared ({ caller }) actor class SearchIndexes() = this {
 
   // ===== SYSTEM =====
 
-  type inspectParams = {
-    arg : Blob;
-    caller : Principal;
-    msg : {
-      #handlerPublicSearch : () -> { requests: {text: Text; kinds: [ReqKind.ReqKind]}; limit: Nat };
-      #handlerSaveEntry : () -> {kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text};
-      #handlerLiberateEntry : () -> { kind: ReqKind.ReqKind; key: Text };
-    } or InspectCommon;
-  };
-
-  system func inspect(params: inspectParams) : Bool {
-    if ( params.caller.isAnonymous() ) return false;
-    if ( params.arg.size() > 5000 ) return false;
-
-    true
+  system func inspect({ arg : Blob; caller : Principal }) : Bool {
+    inspectBasic({ arg = arg; caller = caller; maxArgSize = 1000 })
   };
 
   // ===== HANDLERS =====
