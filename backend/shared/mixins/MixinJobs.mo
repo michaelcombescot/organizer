@@ -31,7 +31,7 @@ mixin<system>({
   };
 
   type InspectJobs = {
-    #handlerCreateAndProcessJob : (job: Job) -> ();
+    #handlerCreateAndProcessJob : () -> (job: Job);
     #handlerRequeueFailedJob : () -> (jobId : Nat);
     #handlerRequeueAllFailedJobs : () -> ();
     #handlerGetFailedJobs : () -> ();

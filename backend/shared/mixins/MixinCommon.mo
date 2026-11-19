@@ -128,7 +128,15 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
     #ok
   };
 
+  func callerIsIdentified(caller: Principal) : Result<(), HandlerErr> {
+    switch (isOpenToRequests()) { case(#ok) (); case(#err(e)) return #err(e); };
+    if ( caller.isAnonymous() ) return #err(#errMustNotBeAnonymous);
+    #ok
+  };
+
   func canAccessBasic(caller: Principal) : Result<(), HandlerErr> {
+    if ( caller.isAnonymous() ) return #err(#errMustNotBeAnonymous);
+
     switch ( isOpenToRequests() ) {
       case (#ok) ();
       case (#err(e)) return #err(e);

@@ -9,7 +9,7 @@ shared ({ caller = owner }) actor class Factory() = this {
 
   include MixinCommon({
     thisPrincipal = thisPrincipal;
-    thisKind = #static(#factory); mapping = ?{ version = 0; canisters = [(#static(#factory), [(0, thisPrincipal)])] };
+    thisKind = #static(#factory);
   });
   include MixinNewCanisters<system>({
     thisPrincipal = thisPrincipal;
@@ -18,7 +18,7 @@ shared ({ caller = owner }) actor class Factory() = this {
     memMapping = memMapping;
     memKnownCanisters = memKnownCanisters;
     knownCanistersToMapping = knownCanistersToMapping;
-    isKnownBasic = isKnownBasic;
+    canAccess = canAccess;
   });
   include MixinTopUpCycles<system>(memMapping);   
 
@@ -27,7 +27,7 @@ shared ({ caller = owner }) actor class Factory() = this {
   type inspectParams = {
     arg : Blob;
     caller : Principal;
-    msg : InspectMapping or InspectCreateCanisters;
+    msg : InspectCommon or InspectCreateCanisters;
   };
 
   system func inspect(params: inspectParams) : Bool {

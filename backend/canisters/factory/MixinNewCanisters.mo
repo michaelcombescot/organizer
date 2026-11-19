@@ -1,5 +1,6 @@
 import Nat "mo:core/Nat";
 import Error "mo:core/Error";
+import { type Result } "mo:core/Result";
 import Canisters "../../shared/Canisters";
 import Result "mo:core/Result";
 import Principal "mo:core/Principal";
@@ -9,6 +10,7 @@ import Timer "mo:core/Timer";
 import Debug "mo:core/Debug";
 import Iter "mo:core/Iter";
 import Errors "../../shared/Errors";
+import { type HandlerErr } "../../shared/Errors";
 import BucketUsers "../buckets/bucketUsers/BucketUsers";
 import SearchIndexes "../searches/SearchIndexes";
 import IndexMain "../indexes/IndexMain";
@@ -21,7 +23,7 @@ mixin<system>({
   memKnownCanisters: Map.Map<Principal, Nat>;
   memVersion: Canisters.Version;
   knownCanistersToMapping : () -> Canisters.Mapping;
-  isKnownBasic : (Principal) -> Bool;
+  canAccess : (Principal) -> async Result<(), HandlerErr>;
 }) {
   // ===== CONFIGS =====
 
@@ -97,13 +99,13 @@ mixin<system>({
       switch (kind) {
         case (#orderedByHash(h)) {
           switch (h) {
-            case (#bucketUsers) Principal.fromActor(await (with cycles = nbCycles) (system BucketUsers.BucketUsers)(settings)(?knownCanistersToMapping()));
-            case (#searchIndexes) Principal.fromActor(await (with cycles = nbCycles) (system SearchIndexes.SearchIndexes)(settings)(?knownCanistersToMapping()));
+            case (#bucketUsers) Principal.fromActor(await (with cycles = nbCycles) (system BucketUsers.BucketUsers)(settings)());
+            case (#searchIndexes) Principal.fromActor(await (with cycles = nbCycles) (system SearchIndexes.SearchIndexes)(settings)());
           }
         };
         case (#orderedByTime(i)) {
           switch (i) {
-            case (#indexMain) Principal.fromActor(await (with cycles = nbCycles) (system IndexMain.IndexMain)(settings)(?knownCanistersToMapping()));
+            case (#indexMain) Principal.fromActor(await (with cycles = nbCycles) (system IndexMain.IndexMain)(settings)());
           }
         };
       };
@@ -149,7 +151,7 @@ mixin<system>({
   // ===== HANDLERS =====
 
   public shared ({ caller }) func handlerCreateOrderedByTimeCanister(kind: Canisters.OrderedByTimeKind) : async Result.Result<Principal, Errors.HandlerErr> {
-    if ( not isKnownBasic(caller) ) return #err(#errForbidden);
+    let #ok = (await canAccess(caller)) else return #err(#errForbidden);
 
     // 1. CREATE THE CANISTER
 
