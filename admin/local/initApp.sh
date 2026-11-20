@@ -33,19 +33,10 @@ echo "===== STATIC CANISTERS DEPLOYED ====="
 # The factory is the garant of the application full canister mapping.
 # It will be interogated by everyone, admin included, to retrieve the full mapping of canisters.
 
-echo " ===== MAKE STATIC CANISTERS KNOWN EACH OTHERS ====="
-
-echo "--- Make factory known everyone"
+echo " ===== UPDATE FACTORY MAPPING WITH STATIC CANISTERS ====="
 
 icp canister call Factory handlerAddStaticCanisters \
   '(vec { record { variant { registryIndexes } ; principal "'"$REGISTRY_INDEXES_ID"'" } })' \
-  -e "$NETWORK" \
-  --identity "$IDENTITY_NAME"
-
-echo "--- Make every static canister know the Factory"
-
-icp canister call RegistryIndexes handlerAddStaticCanisters \
-  '(vec { record { variant { factory }; principal "'"$FACTORY_ID"'" } })' \
   -e "$NETWORK" \
   --identity "$IDENTITY_NAME"
 

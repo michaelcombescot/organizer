@@ -26,11 +26,7 @@ shared ({ caller }) actor class BucketUsers() = this {
     memKnownCanisters = memKnownCanisters;
     createActorSearchIndexesFor = createActorSearchIndexesFor;
   });
-  include MixinJobs<system>({
-    useTimer = true;
-    timerRetryDelayNs = null;
-    executeJob = executeJob;
-  });
+  include MixinJobs<system>({ executeJob = executeJob });
   
   // ===== CONFIGS =====
 
@@ -72,21 +68,18 @@ shared ({ caller }) actor class BucketUsers() = this {
 
   public shared ({ caller }) func handlerCreateUser() : async Result<(), Errors.HandlerErr> {
     switch(callerIsIdentified(caller)) { case (#ok) (); case (#err(e)) return #err(e); };
-    if ( memGuards.size() >= MAX_NUMBER_USERS ) return #err(#errMemoryLimitReached);
+    if ( memUsers.size() >= MAX_NUMBER_USERS ) return #err(#errMemoryLimitReached);
 
     if ( memUsers.containsKey(caller) ) return #err(#errValidation([#alreadyExists { field = "caller" }]));
 
-    switch (acquireGuard(caller)) {
-      case (#ok(())) ();
-      case (#err(e)) return #err(e);
-    };
-
     try {
+      switch (acquireGuard(caller)) { case (#ok(())) (); case (#err(e)) return #err(e); };
+
       let job = #jobBucketUsers(#updateUserIndex({ kind = #usersByPrincipal ; key = caller.toText(); owner = #principal(caller) })); 
       switch (await executeJob(job)) {
         case (#ok(())) ();
         case (#err(e)) {
-          memGuards.remove(caller);
+          memUsers.remove(caller);
           return #err(e);
         };
       };
@@ -113,12 +106,9 @@ shared ({ caller }) actor class BucketUsers() = this {
   }) : async Result<(), Errors.HandlerErr> {
     let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
-    switch (acquireGuard(caller)) {
-      case (#ok(())) ();
-      case (#err(e)) return #err(e);
-    };
-
     try {
+      switch (acquireGuard(caller)) { case (#ok(())) (); case (#err(e)) return #err(e); };
+
       var updatedUser = { user with updatedAt = Time.now() };
 
       // Save indexes
@@ -165,33 +155,17 @@ shared ({ caller }) actor class BucketUsers() = this {
   };
 
   public shared ({ caller }) func handlerDeleteUser() : async Result<(), Errors.HandlerErr> {
-    switch (acquireGuard(caller)) {
-      case (#ok(())) ();
-      case (#err(e)) return #err(e);
-    };
-
     let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
-    try {
-      switch ( await createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByPrincipal; key = caller.toText() }))) ) {
-        case (#ok(())) ();
-        case (#err(e)) return #err(e);
-      };
+    memUsers.remove(caller);
 
-      switch ( await createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByName; key = user.name }))) ) {
-        case (#ok(())) ();
-        case (#err(e)) return #err(e);
-      };
+    // removing the different user indexes associated with this user can be done asynchronously
+    // job system will handle failures if any
+    ignore createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByPrincipal; key = caller.toText() })));
 
-      switch ( await createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByEmail; key = user.email }))) ) {
-        case (#ok(())) ();
-        case (#err(e)) return #err(e);
-      };
-    } catch e {
-      return #err(#errInterCanisterCall(e.message()));
-    } finally {
-      releaseGuard(caller);
-    };
+    ignore createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByName; key = user.name })));
+
+    ignore createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByEmail; key = user.email })));
 
     #ok
   };
@@ -201,11 +175,11 @@ shared ({ caller }) actor class BucketUsers() = this {
 
   func acquireGuard(caller: Principal) : Result<(), Errors.HandlerErr> {
     switch (memGuards.get(caller)) {
-      case (?_) {
+      case (?_) #err(#errGuarded);
+      case (null) {
         memGuards.add(caller, ());
         #ok;
       };
-      case (null) #err(#errGuarded);
     }
   };
 

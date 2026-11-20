@@ -1,4 +1,7 @@
-- passer le mini job de la factory pour envoyer le mapping lors de la création d'un canister sur le mixin
+- finir le scaffold:
+  - vérifier que les actions sur un user fonctionnent
+  - finaliser un exemple de search sur les utilisateurs (nom, email et principal), essayer de le faire full frontend via la récupération des index search.
+    mimiquer la méthode findCanisterFor(Text) en js
 
 
 to know:

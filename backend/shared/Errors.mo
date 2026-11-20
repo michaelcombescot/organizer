@@ -29,7 +29,10 @@ module {
     #errValidation: [ValidationErr];
     
     // Jobs
-    #errJobExec: Text;
+    #errJobFailed: Text;
+    #errTooManyConcurrentJobs;
+    #errJobAlreadyRunning;
+    #errJobNotReady;
   };
 
   public type ValidationErr = {
