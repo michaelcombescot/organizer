@@ -109,9 +109,12 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
 
     memAllJobsProcessing := true;
 
+    let snapshot = memJobs.values().toArray();
+
     ignore async {
       try {
-        for ((jobId, jobWrapper) in memJobs.entries()) {
+        for (jobWrapper in snapshot.values()) {
+          let ?jobInMemory = memJobs.get(jobWrapper.jobId) else continue;
           ignore await processJob(jobWrapper);
         };
       } finally {
@@ -149,7 +152,7 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
     memJobFailed.remove(jobId);
     memJobs.add(jobId, updatedJob);
 
-    await processJob(updatedJob)
+    #ok
   };
 
   public shared ({ caller }) func handlerRequeueAllFailedJobs() : async Result<(), HandlerErr> {
