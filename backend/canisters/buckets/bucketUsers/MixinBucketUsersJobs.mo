@@ -48,7 +48,7 @@ mixin({
         };
       };
       case (_) {
-        #err(#errJobExec("Unknown job type"));
+        #err(#errJobFailed("Unknown job type"));
       };
     };
   };

@@ -75,7 +75,7 @@ shared ({ caller = owner }) actor class Factory() = this {
 
   func sendMappingToAll() : async () {
     for (target in memKnownCanisters.keys()) {
-      ignore createAndExecuteJob(#jobFactory(#sendMappingTo(target)));
+      ignore createAndProcessJob(#jobFactory(#sendMappingTo(target)));
     };
   };
 

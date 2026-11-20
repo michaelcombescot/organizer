@@ -52,7 +52,7 @@ shared ({ caller }) actor class SearchIndexes() = this {
   };
 
   public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text }) : async Result<(), Errors.HandlerErr> {
-    switch ( await canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
+    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let map = switch ( memQuery.get(kind) ) {
       case (?m) m;
@@ -73,7 +73,7 @@ shared ({ caller }) actor class SearchIndexes() = this {
   };
 
   public shared ({ caller }) func handlerLiberateEntry({ kind: ReqKind.ReqKind; key: Text }) : async Result<(), Errors.HandlerErr> {
-    switch ( await canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
+    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let ?map = memQuery.get(kind) else { return #ok };
     map.remove(key);

@@ -76,7 +76,7 @@ shared ({ caller }) actor class BucketUsers() = this {
       switch (acquireGuard(caller)) { case (#ok(())) (); case (#err(e)) return #err(e); };
 
       let job = #jobBucketUsers(#updateUserIndex({ kind = #usersByPrincipal ; key = caller.toText(); owner = #principal(caller) })); 
-      switch (await executeJob(job)) {
+      switch (await createAndProcessJob(job)) {
         case (#ok(())) ();
         case (#err(e)) {
           memUsers.remove(caller);
@@ -114,10 +114,10 @@ shared ({ caller }) actor class BucketUsers() = this {
       // Save indexes
 
       let jobIndexName = #jobBucketUsers(#updateUserIndex({ kind = #usersByName ; key = updatedUser.name; owner = #principal(caller) }));
-      let futureName = executeJob(jobIndexName);
+      let futureName = createAndProcessJob(jobIndexName);
 
       let jobIndexEmail = #jobBucketUsers(#updateUserIndex({ kind = #usersByEmail ; key = updatedUser.email; owner = #principal(caller) }));
-      let futureEmail = executeJob(jobIndexEmail);
+      let futureEmail = createAndProcessJob(jobIndexEmail);
       
       let errors = List.empty<Errors.ValidationErr>();
 
@@ -161,11 +161,11 @@ shared ({ caller }) actor class BucketUsers() = this {
 
     // removing the different user indexes associated with this user can be done asynchronously
     // job system will handle failures if any
-    ignore createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByPrincipal; key = caller.toText() })));
+    ignore createAndProcessJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByPrincipal; key = caller.toText() })));
 
-    ignore createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByName; key = user.name })));
+    ignore createAndProcessJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByName; key = user.name })));
 
-    ignore createAndExecuteJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByEmail; key = user.email })));
+    ignore createAndProcessJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByEmail; key = user.email })));
 
     #ok
   };
