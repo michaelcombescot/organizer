@@ -3,14 +3,14 @@ import Principal "mo:core/Principal";
 import Error "mo:core/Error";
 import { type Result } "mo:core/Result";
 import { type CanisterKind; type Mapping } "../../shared/Canisters";
-import { type Job } "../../shared/Job";
-import { type HandlerErr } "../../shared/Errors";
+import { type Job; type JobWrapper } "../../shared/Job";
+import { type ErrHandler } "../../shared/Errors";
 import { type ActorUpdateMapping } "../../shared/Interfaces";
 
 mixin({
   mappingToPublic: () -> Mapping;
 }) {
-  func executeJob(job: Job) : async Result<(), HandlerErr> {
+  func executeJob(job: Job) : async Result<(), ErrHandler> {
     switch (job) {
       case (#jobFactory(j)) {
         switch (j) {
@@ -29,7 +29,7 @@ mixin({
         };
       };
       case (_) {
-        #err(#errJobFailed("Unknown job type"));
+        #err(#errSystem("Unknown job type"));
       };
     };
   };

@@ -9,7 +9,7 @@ import List "mo:core/List";
 import Time "mo:core/Time";
 import Result "mo:core/Result";
 import Blob "mo:core/Blob";
-import { type HandlerErr } "../Errors";
+import { type ErrHandler } "../Errors";
 import { type ActorSearchIndexes; type ActorFactory; } "../Interfaces";
 
 mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
@@ -62,23 +62,23 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
   // ===== Permissions =====
   //////
 
-  func isOpenToRequests() : Result<(), HandlerErr> {
+  func isOpenToRequests() : Result<(), ErrHandler> {
     if ( updateOngoing or updateMappingOngoing ) return #err(#errUpdateOngoing);
     #ok
   };
 
-  func isKnown(caller: Principal) : Result<(), HandlerErr> {
+  func isKnown(caller: Principal) : Result<(), ErrHandler> {
     if ( not(memKnownCanisters.containsKey(caller) or caller.isController() ) ) return #err(#errForbidden);
     #ok
   };
 
-  func callerIsIdentified(caller: Principal) : Result<(), HandlerErr> {
+  func callerIsIdentified(caller: Principal) : Result<(), ErrHandler> {
     switch (isOpenToRequests()) { case(#ok) (); case(#err(e)) return #err(e); };
     if ( caller.isAnonymous() ) return #err(#errMustNotBeAnonymous);
     #ok
   };
 
-  func canAccess(caller: Principal) : Result<(), HandlerErr> {
+  func canAccess(caller: Principal) : Result<(), ErrHandler> {
     if ( caller.isAnonymous() ) return #err(#errMustNotBeAnonymous);
 
     switch ( isOpenToRequests() ) {
@@ -109,7 +109,7 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
 
   // ACTORS CREATION
 
-  func createActorFactory() : Result<ActorFactory, HandlerErr> {
+  func createActorFactory() : Result<ActorFactory, ErrHandler> {
     let principal = switch ( memMapping.get(#static(#factory)) ) {
       case (?factories) {
         switch (factories.get(0)) { case (?p) p; case null return #err(#errNotFound("No factories found in mapping")); };
@@ -120,7 +120,7 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
     #ok(actor(principal.toText()) : ActorFactory)
   };
 
-  func createActorSearchIndexesFor(text: Text) : Result<ActorSearchIndexes, HandlerErr> {
+  func createActorSearchIndexesFor(text: Text) : Result<ActorSearchIndexes, ErrHandler> {
     let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#searchIndexes)), text) else return #err(#errNotFound("No search index found for the given text"));
     #ok(actor(principal.toText()) : ActorSearchIndexes)
   };
@@ -155,7 +155,7 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
 
   // Handler to fetch the full mapping of canisters, restricted to known basic callers.
   // Mainly used for controllers to know if the mapping is up to date
-  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<Canisters.Mapping, HandlerErr> {
+  public query ({ caller }) func handlerGetFullMapping() : async Result.Result<Canisters.Mapping, ErrHandler> {
     switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     #ok(mappingToPublic())
@@ -163,11 +163,11 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
 
   // Handler called by the factory when a new dynamic canister is created.
   // It updates the internal mapping with the latest information provided by the factory.
-  public shared ({ caller }) func handlerUpdateMapping(mapping: Canisters.Mapping) : async Result.Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerUpdateMapping(mapping: Canisters.Mapping) : async Result.Result<(), ErrHandler> {
     switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     if (mapping.canisters.size() == 0) return #err(#errNotFound("No canisters found in mapping"));
-    if (mapping.version > memCurrentVersion) return #err(#errBadRequest("Mapping version is missing"));
+    if (mapping.version < memCurrentVersion) return #ok;
 
     for ( (kind, principals) in mapping.canisters.values() ) {
       let map = switch ( memMapping.get(kind) ) {
@@ -186,28 +186,6 @@ mixin ({ thisPrincipal: Principal; thisKind: Canisters.CanisterKind; }) {
     };
 
     memCurrentVersion := mapping.version;
-
-    #ok
-  };
-
-  // Handler called by a controller to make static canisters know to the factory,
-  // and the factory known to the statics canisters.
-  public shared ({ caller }) func handlerAddStaticCanisters(canisters: [(Canisters.StaticKind, Principal)]) : async Result.Result<(), HandlerErr> {
-    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
-
-    for ((kind, principal) in canisters.values()) {
-      let map = switch ( memMapping.get(#static(kind)) ) {
-        case null {
-          let map = Map.empty<Nat, Principal>();
-          memMapping.add(#static(kind), map);
-          map
-        };
-        case (?map) map;
-      };
-
-      map.add(0, principal);
-      memKnownCanisters.add(principal, 0);
-    };
 
     #ok
   };

@@ -1,7 +1,10 @@
 import Map "mo:core/Map";
+import { type Result } "mo:core/Result";
+import { type ErrValidation } "../shared/Errors";
 import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Text "mo:core/Text";
+import List "mo:core/List";
 import Loc "../shared/Loc";
 
 module {
@@ -11,6 +14,24 @@ module {
     groups: Map.Map<Loc.LocOwner, ()>;
     createdAt: Time.Time;
     updatedAt: Time.Time;
+  };
+
+  public func validate(self : User) : Result<(), [ErrValidation]> {
+    let errors = List.empty<ErrValidation>();
+
+    if (self.name.size() < 3 or self.name.size() > 100) {
+      errors.add(#badLength({ field = "name"; min = 3; max = 100 }));
+    };
+    
+    if (self.email.size() < 3 or self.email.size() > 100) {
+      errors.add(#badLength({ field = "email"; min = 5; max = 100 }));
+    };
+
+    if (errors.size() > 0) {
+      #err(errors.toArray())
+    } else {
+      #ok(())
+    };
   };
 
   public type UserData = {

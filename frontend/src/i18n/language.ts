@@ -21,9 +21,20 @@ export interface Translations {
     userSettingsFormEmailLabel: string;
     userSettingsFormSaveButton: string;
 
+    userSearchFormTitle: string;
+    userFormSearchKey: string;
+
     // ===== HOME =====
     homeSidebarTitleGroups: string,
     homeSidebarSelectGroupsAll: string,
+
+    // ===== ERRORS =====
+    errAlreadyExists: (field: string) => string;
+    errBadLength: (field: string, min: bigint, max: bigint) => string;
+
+    // ===== FIELDS =====
+    name: string;
+    email: string;
 
     // // ===== GROUP =====
     // groupDeleteConfirm: (groupName: string) => string;
@@ -53,10 +64,4 @@ export interface Translations {
 
     // todoPriority: Record<Priority, string>;
     // todoStatus: Record<Status, string>;
-
-    // ===== FORM =====
-    formSubmit: string;
-
-    // ===== HOME =====
-    todoCardConfirmDone: string;
 }

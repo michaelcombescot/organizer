@@ -7,7 +7,10 @@ initNetwork:
 	icp network start -e local
 
 initApp:
-	./admin/local/deploy_local.sh
+	./admin/local/initApp.sh
+
+runFront:
+	npm run dev --prefix frontend
 
 getMapping:
 	icp canister call Factory handlerGetFullMapping '()' -e local --identity $(IDENTITY_NAME)

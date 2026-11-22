@@ -4,7 +4,7 @@ import Error "mo:core/Error";
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Result "mo:core/Result";
-import Time "mo:core/Time";
+import Iter "mo:core/Iter";
 import Canisters "../../shared/Canisters";
 import MixinCommon "../../shared/mixins/MixinCommon";
 import MixinJobs "../../shared/mixins/MixinJobs";
@@ -79,7 +79,7 @@ shared ({ caller = owner }) actor class Factory() = this {
     };
   };
 
-  func createCanister(kind: Canisters.DynamicKind) : async Result.Result<Principal, Errors.HandlerErr> {
+  func createCanister(kind: Canisters.DynamicKind) : async Result.Result<Principal, Errors.ErrHandler> {
     let nbCycles = confGetNewCanisterNbCycles(kind);
 
     let settings = #new {
@@ -137,20 +137,46 @@ shared ({ caller = owner }) actor class Factory() = this {
 
     map.add(index, principal);
     memKnownCanisters.add(principal, index);
-    memVersion.currentVersion := memVersion.currentVersion + 1;
-    memVersion.lastVersionMaj := Time.now();
-
-    for ((k, m) in memKnownCanisters.entries()) {
-      
-    };
+    memCurrentVersion += 1;
 
     ignore sendMappingToAll();
   };
 
   // ===== HANDLERS =====
 
-  public shared ({ caller }) func handlerCreateOrderedByTimeCanister(kind: Canisters.OrderedByTimeKind) : async Result.Result<Principal, Errors.HandlerErr> {
-    let #ok = (await canAccess(caller)) else return #err(#errForbidden);
+  public shared ({ caller }) func handlerAddStaticCanisters(entries: [(Canisters.StaticKind, Principal)]) : async Result.Result<(), Errors.ErrHandler> {
+    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
+
+    for (entry in entries.values()) {
+      let (kind, principal) = entry;
+
+      let map = switch ( memMapping.get(#static(kind)) ) {
+        case null {
+          let newMap = Map.empty<Nat, Principal>();
+          memMapping.add(#static(kind), newMap);
+          newMap
+        };
+        case (?map) map;
+      };
+
+      let index = map.size();
+
+      map.add(index, principal);
+      memKnownCanisters.add(principal, index);
+    };
+
+    #ok
+  };
+
+  public query ({ caller }) func handlerGetCanistersOfKind(kind: Canisters.CanisterKind) : async Result.Result<[Principal], Errors.ErrHandler> {
+    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
+
+    let ?map = memMapping.get(kind) else return #err(#errNotFound("No canisters found for kind "));
+    #ok(map.values().toArray())
+  };
+
+  public shared ({ caller }) func handlerCreateOrderedByTimeCanister(kind: Canisters.OrderedByTimeKind) : async Result.Result<Principal, Errors.ErrHandler> {
+    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     // 1. CREATE THE CANISTER
 
@@ -166,7 +192,7 @@ shared ({ caller = owner }) actor class Factory() = this {
     #ok(newPrincipal)
   };
 
-  public shared ({ caller }) func handlerCreateOrderedByHashCanister(kind: Canisters.OrderedByHashKind, index: Nat) : async Result.Result<Principal, Errors.HandlerErr> {
+  public shared ({ caller }) func handlerCreateOrderedByHashCanister(kind: Canisters.OrderedByHashKind, index: Nat) : async Result.Result<Principal, Errors.ErrHandler> {
     if ( not caller.isController() ) return #err(#errForbidden);
 
     // 1. VALIDATE INPUT

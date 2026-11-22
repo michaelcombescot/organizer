@@ -8,11 +8,18 @@ export function getIndexInRing(text: string) {
     return hash % 1_000_000_000_000;
 }
 
-export function getClosestEntry(map: Map<number, any>, target: number) {
-    for (let i = target; i >= 0; i--) {
-        if (map.has(i)) {
-            return { key: i, value: map.get(i) };
+export function getClosestEntry<V>(map: Map<number | bigint, V>, target: number | bigint) {
+    const targetBig = BigInt(target);
+    let bestKey: number | bigint | null = null;
+    let bestValue: V | undefined;
+
+    for (const [key, value] of map.entries()) {
+        const keyBig = BigInt(key);
+        if (keyBig <= targetBig && (bestKey === null || keyBig > BigInt(bestKey))) {
+            bestKey = key;
+            bestValue = value;
         }
     }
-    return null;
+
+    return bestKey !== null ? { key: bestKey, value: bestValue } : null;
 }

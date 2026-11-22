@@ -67,7 +67,7 @@ async function loadUserData() {
   } else {
     let resUserData = await (await actorBucketUsersCurrent()).handlerCreateUser();
     if (resUserData && "ok" in resUserData) {
-      console.log(`User crated successfully:`);
+      console.log(`User created successfully:`);
     } else {
       stateFlashes.flashError = `Failed to create user data`;
       console.log(`Failed to create user data:`, resUserData);

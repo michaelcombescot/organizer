@@ -21,4 +21,4 @@ main = "backend/canisters/indexes/IndexMain.mo"
 main = "backend/canisters/searches/SearchIndexes.mo"
 
 [canisters.BucketUsers]
-main = "backend/canisters/buckets/BucketUsers.mo"
+main = "backend/canisters/buckets/bucketUsers/BucketUsers.mo"

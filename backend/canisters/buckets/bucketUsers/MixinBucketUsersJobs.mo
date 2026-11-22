@@ -1,7 +1,7 @@
 import { type Job } "../../../shared/Job";
 import Result "mo:core/Result";
 import Principal "mo:core/Principal";
-import { type HandlerErr } "../../../shared/Errors";
+import { type ErrHandler } "../../../shared/Errors";
 import { type Result } "mo:core/Result";
 import Map "mo:core/Map";
 import { type ActorSearchIndexes } "../../../shared/Interfaces";
@@ -9,14 +9,9 @@ import { type ActorSearchIndexes } "../../../shared/Interfaces";
 mixin({
   thisPrincipal: Principal;
   memKnownCanisters: Map.Map<Principal, Nat>;
-  createActorSearchIndexesFor: (text: Text) -> Result<ActorSearchIndexes, HandlerErr>;
+  createActorSearchIndexesFor: (text: Text) -> Result<ActorSearchIndexes, ErrHandler>;
 }) {
-  func thisIndex () : Result<Nat, HandlerErr> {
-    let ?index = memKnownCanisters.get(thisPrincipal) else return #err(#errNotFound("Failed to retrieve index for this canister"));
-    #ok(index);
-  };
-
-  func executeJob(job: Job) : async Result<(), HandlerErr> {
+  func executeJob(job: Job) : async Result<(), ErrHandler> {
     switch (job) {
       case (#jobBucketUsers(j)) {
         switch (j) {
@@ -24,7 +19,7 @@ mixin({
             let #ok actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
             try {
-              switch ( await actorSearch.handlerSaveEntry({kind = #reqUsers(#usersByPrincipal); owner = d.owner; key = d.key})) {
+              switch ( await actorSearch.handlerSaveEntry({kind = #reqUsers(d.kind); owner = d.owner; key = d.key})) {
                 case (#ok(())) #ok;
                 case (#err(e)) #err(e);
               };
@@ -36,11 +31,10 @@ mixin({
             let #ok actorSearch = createActorSearchIndexesFor(d.key) else return #err(#errNotFound("Failed to create actor search index for caller"));
 
             try {
-              switch ( await actorSearch.handlerLiberateEntry({kind = #reqUsers(#usersByPrincipal); key = d.key})) {
+              switch ( await actorSearch.handlerLiberateEntry({kind = #reqUsers(d.kind); key = d.key})) {
                 case (#ok(result)) #ok;
                 case (#err(e)) #err(e);
               };
-              
             } catch e {
               #err(#errInterCanisterCall("Failed to liberate entry"))
             }
@@ -48,7 +42,7 @@ mixin({
         };
       };
       case (_) {
-        #err(#errJobFailed("Unknown job type"));
+        #err(#errSystem("Unknown job type"));
       };
     };
   };

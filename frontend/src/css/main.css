@@ -44,6 +44,13 @@ html, body {
 form {
     position: relative;
 
+    .error-message {
+        margin-top: 0.5rem;
+        color: var(--danger-color);
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
     .form-group {
         display: flex;
         flex-direction: column;

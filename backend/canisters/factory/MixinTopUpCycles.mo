@@ -29,7 +29,7 @@ mixin<system>({ memMapping: Map.Map<Canisters.CanisterKind, Map.Map<Nat, Princip
 
   // ===== HELPERS =====
 
-  func topUpCanister(kind: Canisters.CanisterKind, canisterId: Principal) : async Result.Result<(), Errors.HandlerErr> {
+  func topUpCanister(kind: Canisters.CanisterKind, canisterId: Principal) : async Result.Result<(), Errors.ErrHandler> {
     let status =try {
       await ic.canister_status({ canister_id = canisterId; })
     } catch (e) {

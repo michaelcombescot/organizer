@@ -1,10 +1,11 @@
 import { useDeepSignal } from "deepsignal";
-import i18n from "../../i18n/i18n";
-import { actorBucketUsers } from "../../backend/actors/bucketUsers";
+import { i18n } from "../../i18n/i18n";
+import { actorBucketUsersCurrent } from "../../backend/actors/bucketUsers";
 import { useSignal } from "@preact/signals";
-import type { HandlerErr } from "../../backend/api/BucketUsers";
 import { stateModal } from "../../states/display";
 import { stateUserData } from "../../states/user";
+import type { ErrHandler } from "../../backend/api/BucketUsers";
+import { displayErrorMessage } from "../../i18n/helpers";
 
 export default function UserSettingsForm() {
   const formData = useDeepSignal({
@@ -12,11 +13,11 @@ export default function UserSettingsForm() {
     email: stateUserData.userData.email
   });
 
-  const formErrors = useSignal<HandlerErr[]>([]);
+  const formErrors = useSignal<ErrHandler | null>(null);
 
   let submitForm = async (e: Event) => {
     e.preventDefault();
-    let resp = await (await actorBucketUsers()).handlerUpdateUser({
+    let resp = await (await actorBucketUsersCurrent()).handlerUpdateUser({
       name: formData.name,
       email: formData.email
     });
@@ -26,7 +27,9 @@ export default function UserSettingsForm() {
       stateUserData.userData.email = formData.email;
       stateUserData.userData.name = formData.name;
     } else if (resp && "err" in resp) {
-      formErrors.value.push(resp.err);
+      formErrors.value = resp.err;
+
+      debugger
     }
   };
 
@@ -34,7 +37,9 @@ export default function UserSettingsForm() {
     <form onSubmit={submitForm}>
       <h2>{i18n().userSettingsFormTitle}</h2>
 
-    
+      <div class="error-message">
+        {formErrors.value && displayErrorMessage(formErrors.value)}
+      </div>
 
       <div class="form-group">
         <label for="name">{i18n().userSettingsFormNameLabel}</label>
@@ -44,8 +49,8 @@ export default function UserSettingsForm() {
           onInput={(e) => formData.name = e.currentTarget.value }
           type="text"
           placeholder={i18n().userSettingsFormNameLabel}
-          minLength={1}
-          maxLength={100}
+          // minLength={3}
+          // maxLength={100}
         />
       </div>
 
@@ -57,7 +62,7 @@ export default function UserSettingsForm() {
           onInput={(e) => formData.email = e.currentTarget.value }
           type="email"
           placeholder={i18n().userSettingsFormEmailLabel}
-          minLength={1}
+          minLength={3}
           maxLength={100}
         />
       </div>

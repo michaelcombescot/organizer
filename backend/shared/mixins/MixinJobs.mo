@@ -5,25 +5,15 @@ import { type Result } "mo:core/Result";
 import Error "mo:core/Error";
 import Principal "mo:core/Principal";
 import Iter "mo:core/Iter";
-import { type Job } "../Job";
-import { type HandlerErr } "../Errors";
+import { type Job; type JobWrapper } "../Job";
+import { type ErrHandler } "../Errors";
 
-mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
+mixin<system>({ executeJob: (Job) -> async Result<(), ErrHandler> }) {
   // ===== CONFIG =====
 
   let JOB_MAX_CONCURRENT = 250;
   let JOB_MAX_RETRY = 3;
   let JOB_RETRY_DELAY_NS = 60_000_000_000; // 1 minute in nanoseconds
-
-  // ===== STRUCTURES =====
-
-  type JobWrapper = {
-    jobId: Nat;
-    job: Job;
-    nbRetry: Nat;
-    retryAt: Time.Time;
-    error: ?HandlerErr
-  };
 
   // ===== MEMORY =====
   
@@ -56,12 +46,12 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
 
   // Process Job
 
-  func processJob(jobWrapper: JobWrapper) : async Result<(), HandlerErr> {
-    if (memJobRunning.size() > JOB_MAX_CONCURRENT) return #err(#errTooManyConcurrentJobs);
-    if (memJobRunning.containsKey(jobWrapper.jobId)) return #err(#errJobAlreadyRunning);
-    if (Time.now() < jobWrapper.retryAt) return #err(#errJobNotReady);
+  func processJob(jobWrapper: JobWrapper) : async Result<(), ErrHandler> {
+    if (memJobRunning.size() > JOB_MAX_CONCURRENT) return #err(#errJob(#errTooManyConcurrentJobs));
+    if (memJobRunning.containsKey(jobWrapper.jobId)) return #err(#errJob(#errJobAlreadyRunning));
+    if (Time.now() < jobWrapper.retryAt) return #err(#errJob(#errJobNotReady));
 
-    func handleFailure(jobWrapper: JobWrapper) : Result<(), HandlerErr> {
+    func handleFailure(jobWrapper: JobWrapper) : Result<(), ErrHandler> {
       let updatedJob = { jobWrapper with nbRetry = jobWrapper.nbRetry + 1; retryAt = Time.now() + JOB_RETRY_DELAY_NS };
       
       if (updatedJob.nbRetry >= JOB_MAX_RETRY) {
@@ -72,7 +62,7 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
       };
 
       let msg = "Job failed after " # updatedJob.nbRetry.toText() # " retries, error: " # debug_show(jobWrapper.error);
-      #err(#errJobFailed(msg))
+      #err(#errJob(#errJobFailed(msg)))
     };
 
     try {
@@ -83,16 +73,16 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
           memJobs.remove(jobWrapper.jobId);
           #ok;
         };
-        case (#err(e)) handleFailure({jobWrapper with error = ?e });
+        case (#err(e)) handleFailure({jobWrapper with error = ?#errHandler(e) });
       }
     } catch e {
-      handleFailure({jobWrapper with error = ?#errInterCanisterCall(e.message())})
+      handleFailure({jobWrapper with error = ?#errHandler(#errInterCanisterCall(e.message()))})
     } finally {
       memJobRunning.remove(jobWrapper.jobId);
     }
   };
 
-  func createAndProcessJob(job: Job) : async Result<(), HandlerErr> {
+  func createAndProcessJob(job: Job) : async Result<(), ErrHandler> {
     // this is a way to trigger a retry for all jobs without a timer, at minimal cost
     await processAllJobs();
 
@@ -113,8 +103,8 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
 
     ignore async {
       try {
-        for (jobWrapper in snapshot.values()) {
-          let ?jobInMemory = memJobs.get(jobWrapper.jobId) else continue;
+        label l for (jobWrapper in snapshot.values()) {
+          let ?jobInMemory = memJobs.get(jobWrapper.jobId) else continue l;
           ignore await processJob(jobWrapper);
         };
       } finally {
@@ -128,7 +118,7 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
 
   // Create a new job
 
-  public shared ({ caller }) func handlerCreateAndProcessJob(job: Job) : async Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerCreateAndProcessJob(job: Job) : async Result<(), ErrHandler> {
     if (not caller.isController()) return #err(#errMustBeController);
 
     await createAndProcessJob(job)
@@ -136,13 +126,19 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
 
   // Failed Jobs management
 
-  public query ({ caller }) func handlerGetFailedJobs() : async Result<[JobWrapper], HandlerErr> {
+  public query ({ caller }) func handlerGetOngoingJobs() : async Result<[JobWrapper], ErrHandler> {
+    if (not caller.isController()) return #err(#errMustBeController);
+
+    #ok(memJobs.values().toArray())
+  };
+
+  public query ({ caller }) func handlerGetFailedJobs() : async Result<[JobWrapper], ErrHandler> {
     if (not caller.isController()) return #err(#errMustBeController);
 
     #ok(memJobFailed.values().toArray())
   };
 
-  public shared ({ caller }) func handlerRequeueFailedJob(jobId: Nat) : async Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerRequeueFailedJob(jobId: Nat) : async Result<(), ErrHandler> {
     if (not caller.isController()) return #err(#errMustBeController);
 
     let ?failedJob = memJobFailed.get(jobId) else return #err(#errNotFound("Failed to find failed job with ID " # jobId.toText()));
@@ -155,7 +151,7 @@ mixin<system>({ executeJob: (Job) -> async Result<(), HandlerErr> }) {
     #ok
   };
 
-  public shared ({ caller }) func handlerRequeueAllFailedJobs() : async Result<(), HandlerErr> {
+  public shared ({ caller }) func handlerRequeueAllFailedJobs() : async Result<(), ErrHandler> {
     if (not caller.isController()) return #err(#errMustBeController);
 
     let failedEntries = memJobFailed.entries().toArray();

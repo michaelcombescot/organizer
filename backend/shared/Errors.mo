@@ -1,5 +1,5 @@
 module {
-  public type HandlerErr = {
+  public type ErrHandler = {
     // System
     #errSystem: Text;
     #errInterCanisterCall: Text;
@@ -26,17 +26,22 @@ module {
     #errIndexNotFound;
 
     // Validations
-    #errValidation: [ValidationErr];
+    #errValidation: [ErrValidation];
     
     // Jobs
+    #errJob: ErrJob;
+  };
+
+  public type ErrValidation = {
+    #alreadyExists: { field: Text };
+    #badLength: {field: Text; min: Nat; max: Nat};
+  };
+
+  public type ErrJob = {
+    #errHandler: ErrHandler;
     #errJobFailed: Text;
     #errTooManyConcurrentJobs;
     #errJobAlreadyRunning;
     #errJobNotReady;
-  };
-
-  public type ValidationErr = {
-    #alreadyExists: { field: Text };
-    #badLength: {field: Text; min: Nat; max: Nat};
   };
 }

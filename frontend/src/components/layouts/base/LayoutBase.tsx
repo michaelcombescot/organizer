@@ -1,6 +1,6 @@
 import Router, { Route } from "preact-router";
 import { stateAuthenticated, statePrincipal, signIn, signOut } from "../../../states/auth";
-import i18n from "../../../i18n/i18n";
+import { i18n } from "../../../i18n/i18n";
 import Home from "../../pages/home/Home";
 import Sidebar from "./Sidebar";
 import Modal from "./Modal";

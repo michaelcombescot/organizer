@@ -13,14 +13,28 @@ export const ENGLISH: Language = {
     layoutUserSettingsLink: "Settings",
     
     // ===== USERS =====
+
     userSettingsFormTitle: "User Settings",
     userSettingsFormNameLabel: "Name",
     userSettingsFormEmailLabel: "Email",
     userSettingsFormSaveButton: "Save",
 
+    userSearchFormTitle: "User Search",
+    userFormSearchKey: "Search Key",
+
     // ===== HOME =====
     homeSidebarTitleGroups: "Groups",
     homeSidebarSelectGroupsAll: "All groups",
+
+    // ===== ERRORS =====
+
+    errAlreadyExists: (field: string) => `${field} already exists`,
+    errBadLength: (field: string, min: bigint, max: bigint) => `${field} must be between ${min} and ${max} characters`,
+
+    // ===== FIELDS =====
+
+    name: "Name",
+    email: "Email",
 
     // // ===== GROUPS =====
     // groupDeleteConfirm: (name: string) => 
@@ -63,11 +77,5 @@ export const ENGLISH: Language = {
     //     [Status.inProgress]: "In Progress",
     //     [Status.done]: "Done",
     //   },
-
-    // ===== FORM =====
-    formSubmit: "Submit",
-
-    // ===== HOME =====
-    todoCardConfirmDone: "Are you sure you want to mark this todo as done? The todo will be deleted.",
   }
 };

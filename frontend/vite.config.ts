@@ -3,21 +3,26 @@ import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
 import { icpBindgen } from "@icp-sdk/bindgen/plugins/vite";
 import { execSync } from "child_process";
+import { readFileSync } from "fs";
 
 const environment = process.env.ICP_ENVIRONMENT || "local";
-
-// Canisters the frontend talks to (names from icp.yaml)
 const CANISTER_NAMES = ["RegistryIndexes"];
 
-function icp(args: string): string {
-  return execSync(`icp ${args} -e ${environment}`, { encoding: "utf-8", stdio: "pipe" }).trim();
+const icp = (args: string) =>
+  execSync(`icp ${args} -e ${environment}`, { encoding: "utf-8", stdio: "pipe" }).trim();
+
+function getCanisterId(name: string): string {
+  try {
+    const ids = JSON.parse(readFileSync(`../.icp/cache/mapping/${environment}.ids.json`, "utf-8"));
+    if (ids[name]) return ids[name];
+  } catch {}
+  return icp(`canister status ${name} --id-only`);
 }
 
-// In production the asset canister sets the `ic_env` cookie; in dev we simulate it
 function getDevServerConfig() {
   const network = JSON.parse(icp("network status --json"));
   const canisters = CANISTER_NAMES
-    .map((name) => `PUBLIC_CANISTER_ID:${name}=${icp(`canister status ${name} --id-only`)}`)
+    .map((name) => `PUBLIC_CANISTER_ID:${name}=${getCanisterId(name)}`)
     .join("&");
 
   return {
@@ -34,22 +39,12 @@ export default defineConfig(({ command }) => ({
   plugins: [
     preact(),
     tailwindcss(),
-    icpBindgen({
-      didFile: "../.mops/.build/RegistryIndexes.did",
-      outDir: "./src/backend/api",
-    }),
-    icpBindgen({
-      didFile: "../.mops/.build/IndexMain.did",
-      outDir: "./src/backend/api",
-    }),
-    icpBindgen({
-      didFile: "../.mops/.build/BucketUsers.did",
-      outDir: "./src/backend/api",
-    }),
-    icpBindgen({
-      didFile: "../.mops/.build/SearchIndexes.did",
-      outDir: "./src/backend/api",
-    }),
+    ...["RegistryIndexes", "IndexMain", "BucketUsers", "SearchIndexes"].map((name) =>
+      icpBindgen({
+        didFile: `../.mops/.build/${name}.did`,
+        outDir: "./src/backend/api",
+      })
+    ),
   ],
   ...(command === "serve" ? { server: getDevServerConfig() } : {}),
 }));

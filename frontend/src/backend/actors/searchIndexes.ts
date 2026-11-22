@@ -1,4 +1,4 @@
-import { createActor, ReqKind } from "../api/SearchIndexes";
+import { createActor, ReqUser, type ReqKind } from "../api/SearchIndexes";
 import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 import { stateIdentity } from "../../states/auth";
 import { stateUserBucket } from "../../states/user";
@@ -12,6 +12,7 @@ export class SearchIndexesActor {
     let hash = getIndexInRing(text);
 
     let canisterId = getClosestEntry(stateCanistersSearchIndexes.value, hash)?.value;
+
     if (!canisterId) {
       throw new Error("No suitable canister found for the given text");
     }
@@ -36,10 +37,19 @@ export class SearchIndexesActor {
 
     // 1. Retrieve localisation of matched users
     let resSearch = await actor.handlerPublicSearch({
-      limit: BigInt(50),
-      requests: { text: text, kinds: [ReqKind.usersByName, ReqKind.usersByEmail, ReqKind.usersByPrincipal] }
+      limit: BigInt(20),
+      requests: {
+        text,
+        kinds: [
+          { __kind__: "reqUsers", reqUsers: ReqUser.usersByName },
+          { __kind__: "reqUsers", reqUsers: ReqUser.usersByEmail },
+          { __kind__: "reqUsers", reqUsers: ReqUser.usersByPrincipal },
+        ] satisfies ReqKind[],
+      }
     });
     
+    debugger
+
     if (resSearch && "err" in resSearch) {
       throw new Error(`Search failed or returned no results: ${JSON.stringify(resSearch.err)}`);
     }

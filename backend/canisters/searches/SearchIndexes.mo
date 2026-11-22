@@ -6,7 +6,7 @@ import Text "mo:core/Text";
 import Iter "mo:core/Iter";
 import Result "mo:core/Result";
 import MixinCommon "../../shared/mixins/MixinCommon";
-import { type HandlerErr } "../../shared/Errors";
+import { type ErrHandler } "../../shared/Errors";
 import { ReqKind } "../../shared/Req";
 import Loc "../../shared/Loc";
 import Errors "../../shared/Errors";
@@ -28,10 +28,14 @@ shared ({ caller }) actor class SearchIndexes() = this {
 
   // ===== HANDLERS =====
 
+  public query func getAllKeys() : async Result<[(ReqKind.ReqKind, [Text])], ErrHandler> {
+    #ok(memQuery.entries().map(func ((kind, map)) = (kind, map.keys().toArray())).toArray())
+  };
+
   public query func handlerPublicSearch({
     requests: {text: Text; kinds: [ReqKind.ReqKind]}; 
     limit: Nat
-  }) : async Result.Result<[Loc.Loc], Errors.HandlerErr> {
+  }) : async Result.Result<[Loc.Loc], Errors.ErrHandler> {
     if (requests.kinds.size() > 10) { return #err(#errBadRequest("Request size exceeds limit")) };
     if ( limit > 20) { return #err(#errBadRequest("Limit exceeds maximum allowed value")) };
 
@@ -51,7 +55,7 @@ shared ({ caller }) actor class SearchIndexes() = this {
     #ok(resp.toArray())
   };
 
-  public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text }) : async Result<(), Errors.HandlerErr> {
+  public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text }) : async Result<(), Errors.ErrHandler> {
     switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let map = switch ( memQuery.get(kind) ) {
@@ -72,7 +76,7 @@ shared ({ caller }) actor class SearchIndexes() = this {
     #ok(());
   };
 
-  public shared ({ caller }) func handlerLiberateEntry({ kind: ReqKind.ReqKind; key: Text }) : async Result<(), Errors.HandlerErr> {
+  public shared ({ caller }) func handlerLiberateEntry({ kind: ReqKind.ReqKind; key: Text }) : async Result<(), Errors.ErrHandler> {
     switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let ?map = memQuery.get(kind) else { return #ok };

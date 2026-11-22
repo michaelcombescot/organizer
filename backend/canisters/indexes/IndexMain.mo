@@ -7,7 +7,7 @@ import MixinCommon "../../shared/mixins/MixinCommon";
 import Canisters "../../shared/Canisters";
 import { type Result } "mo:core/Result";
 import List "mo:core/List";
-import { type HandlerErr } "../../shared/Errors";
+import { type ErrHandler } "../../shared/Errors";
 import Loc "../../shared/Loc";
 
 shared ({ caller }) actor class IndexMain() = this {
@@ -23,7 +23,7 @@ shared ({ caller }) actor class IndexMain() = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.Loc]) : async Result<[Principal], HandlerErr> {
+  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.Loc]) : async Result<[Principal], ErrHandler> {
     if ( updateMappingOngoing ) return #err(#errUpdateOngoing);
     if ( caller.isAnonymous() ) return #err(#errForbidden);
 
@@ -41,7 +41,7 @@ shared ({ caller }) actor class IndexMain() = this {
     #ok(results.toArray());
   };
 
-  public query ({ caller }) func handlerGetSearchIndexes() : async Result<[(Nat, Principal)], HandlerErr> {
+  public query ({ caller }) func handlerGetSearchIndexes() : async Result<[(Nat, Principal)], ErrHandler> {
     if ( caller.isAnonymous() ) return #err(#errForbidden);
 
     let ?map = memMapping.get(#dynamic(#orderedByHash(#searchIndexes))) else return #err(#errNotFound("Failed to find mapping for search indexes"));
@@ -49,7 +49,7 @@ shared ({ caller }) actor class IndexMain() = this {
     #ok(map.entries().toArray());
   };
 
-  public query ({ caller }) func handlerGetCurrentUserBucket() : async Result<Principal, HandlerErr> {
+  public query ({ caller }) func handlerGetCurrentUserBucket() : async Result<Principal, ErrHandler> {
     if ( caller.isAnonymous() ) return #err(#errForbidden);
 
     let ?principal = findCanisterFromText(#dynamic(#orderedByHash(#bucketUsers)), caller.toText()) else return #err(#errNotFound("Failed to find canister for caller"));

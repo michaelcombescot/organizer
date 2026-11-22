@@ -7,7 +7,7 @@
 # 5. make the registryIndexes known to the factory
 
 IDENTITY_NAME="local"
-NETWORK="local"
+NETWORK="local" # ic for mainnet
 
 # Create a new identity if needed
 # icp identity new local --storage plaintext
@@ -23,9 +23,11 @@ icp deploy Factory -e "$NETWORK" --identity "$IDENTITY_NAME" --cycles 20_000_000
 FACTORY_ID=$(icp canister status Factory -e "$NETWORK" --id-only)
 
 # then the registryIndexes canister
-icp deploy RegistryIndexes -e "$NETWORK" --identity "$IDENTITY_NAME" --cycles 2_000_000_000_000
+icp deploy RegistryIndexes --args "(principal \"$FACTORY_ID\")" -e "$NETWORK" --identity "$IDENTITY_NAME" --cycles 2_000_000_000_000
 
 REGISTRY_INDEXES_ID=$(icp canister status RegistryIndexes -e "$NETWORK" --id-only)
+
+icp canister settings update RegistryIndexes --add-controller "$FACTORY_ID" -e "$NETWORK" --identity "$IDENTITY_NAME"
 
 echo "===== STATIC CANISTERS DEPLOYED ====="
 
