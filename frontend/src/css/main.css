@@ -45,6 +45,7 @@ form {
     position: relative;
 
     .error-message {
+        white-space: pre-line;
         margin-top: 0.5rem;
         color: var(--danger-color);
         font-size: 0.875rem;

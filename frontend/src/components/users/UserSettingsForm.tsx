@@ -5,7 +5,7 @@ import { useSignal } from "@preact/signals";
 import { stateModal } from "../../states/display";
 import { stateUserData } from "../../states/user";
 import type { ErrHandler } from "../../backend/api/BucketUsers";
-import { displayErrorMessage } from "../../i18n/helpers";
+import ShowFormErrors from "../layouts/base/ShowFormErrors";
 
 export default function UserSettingsForm() {
   const formData = useDeepSignal({
@@ -37,9 +37,7 @@ export default function UserSettingsForm() {
     <form onSubmit={submitForm}>
       <h2>{i18n().userSettingsFormTitle}</h2>
 
-      <div class="error-message">
-        {formErrors.value && displayErrorMessage(formErrors.value)}
-      </div>
+      <ShowFormErrors errors={formErrors.value} />
 
       <div class="form-group">
         <label for="name">{i18n().userSettingsFormNameLabel}</label>

@@ -1,9 +1,6 @@
 import { stateModal } from "../../../states/display";
-import Test from "./Test";
 
 export default function Modal() {
-  // const modalStore = useModalStore();
-
   return (
     <>
       {stateModal.value.visible && (

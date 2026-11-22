@@ -16,71 +16,95 @@ function fieldLabel(field: string): string {
   return typeof value === "string" ? value : field;
 }
 
-export function displayErrorMessage(err: ErrHandler) {
+export function displayErrorMessage(err: ErrHandler | null) : string[] {
+  let errors: string[] = [];
+
+  if (!err) {
+    return errors;
+  }
+
   switch (err.__kind__) {
     case "errValidation":
-      return err.errValidation
+      err.errValidation
         .map((issue) => {
           switch (issue.__kind__) {
             case "alreadyExists": 
-              return i18n().errAlreadyExists(fieldLabel(issue.alreadyExists.field));
+              errors.push(i18n().errAlreadyExists(fieldLabel(issue.alreadyExists.field)));
+              break
             case "badLength":
-              return i18n().errBadLength(fieldLabel(issue.badLength.field), issue.badLength.min, issue.badLength.max);
+              errors.push(i18n().errBadLength(fieldLabel(issue.badLength.field), issue.badLength.min, issue.badLength.max));
+              break
             default:
-              return assertNever(issue, "errValidation");
+              assertNever(issue, "errValidation");
           }
         })
-    .join("; ");
+      break
     case "errInterCanisterCall":
-      return `Inter-canister call error: ${err.errInterCanisterCall}`;
-
+      errors.push(`Inter-canister call error: ${err.errInterCanisterCall}`);
+      break
     case "errBadRequest":
-      return `Bad request: ${err.errBadRequest}`;
+      errors.push(`Bad request: ${err.errBadRequest}`);
+      break
 
     case "errMemoryLimitReached":
-      return "Memory limit reached";
+      errors.push("Memory limit reached");
+      break
 
     case "errIndexNotFound":
-      return "Index not found";
+      errors.push("Index not found");
+      break
 
     case "errUpdateOngoing":
-      return "Update already ongoing";
+      errors.push("Update already ongoing");
+      break
 
     case "errJob":
-      // err.errJob is narrowed to ErrJob
-      return `Job error: ${JSON.stringify(err.errJob)}`;
+      errors.push(`Job error: ${JSON.stringify(err.errJob)}`);
+      break
 
     case "errMustBeController":
-      return "Caller must be controller";
+      errors.push("Caller must be a controller");
+      break
 
     case "errMustNotBeAnonymous":
-      return "Anonymous caller is not allowed";
+      errors.push("Caller must not be anonymous");
+      break
 
     case "errSystem":
-      return `System error: ${err.errSystem}`;
+      errors.push(`System error: ${err.errSystem}`);
+      break
 
     case "errIndexAlreadyExists":
-      return "Index already exists";
+      errors.push("Index already exists");
+      break
 
     case "errWrongCanister":
-      return "Wrong canister";
+      errors.push("Wrong canister");
+      break
 
     case "errCanisterFull":
-      return "Canister is full";
+      errors.push("Canister is full");
+      break
 
     case "errGuarded":
-      return "Operation is guarded";
+      errors.push("Operation is guarded");
+      break
 
     case "errNotFound":
-      return `Not found: ${err.errNotFound}`;
+      errors.push(`Not found: ${err.errNotFound}`);
+      break
 
     case "errForbidden":
-      return "Forbidden";
+      errors.push("Forbidden");
+      break
 
     case "errCannotVerifyCaller":
-      return "Cannot verify caller";
+      errors.push("Cannot verify caller");
+      break
 
     default:
-      return assertNever(err, "handleErr");
+      assertNever(err, "handleErr");
   }
+
+  return errors;
 }
