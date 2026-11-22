@@ -2,10 +2,12 @@ import { useDeepSignal } from "deepsignal";
 import { i18n } from "../../i18n/i18n";
 import { actorBucketUsersCurrent } from "../../backend/actors/bucketUsers";
 import { useSignal } from "@preact/signals";
+import type { TargetedSubmitEvent } from "preact";
 import { stateModal } from "../../states/display";
 import { stateUserData } from "../../states/user";
 import type { ErrHandler } from "../../backend/api/BucketUsers";
 import ShowFormErrors from "../layouts/base/ShowFormErrors";
+import { submitFormWrapper } from "../helpers/formHelpers";
 
 export default function UserSettingsForm() {
   const formData = useDeepSignal({
@@ -15,22 +17,21 @@ export default function UserSettingsForm() {
 
   const formErrors = useSignal<ErrHandler | null>(null);
 
-  let submitForm = async (e: Event) => {
-    e.preventDefault();
-    let resp = await (await actorBucketUsersCurrent()).handlerUpdateUser({
-      name: formData.name,
-      email: formData.email
+  let submitForm = async (e: TargetedSubmitEvent<HTMLFormElement>) => {
+    submitFormWrapper(e, async () => {
+      let resp = await (await actorBucketUsersCurrent()).handlerUpdateUser({
+        name: formData.name,
+        email: formData.email
+      });
+
+      if (resp && "ok" in resp) {
+        stateModal.value = { visible: false, content: null };
+        stateUserData.userData.email = formData.email;
+        stateUserData.userData.name = formData.name;
+      } else if (resp && "err" in resp) {
+        formErrors.value = resp.err;
+      }
     });
-
-    if (resp && "ok" in resp) {
-      stateModal.value = { visible: false, content: null };
-      stateUserData.userData.email = formData.email;
-      stateUserData.userData.name = formData.name;
-    } else if (resp && "err" in resp) {
-      formErrors.value = resp.err;
-
-      debugger
-    }
   };
 
   return (
@@ -47,8 +48,8 @@ export default function UserSettingsForm() {
           onInput={(e) => formData.name = e.currentTarget.value }
           type="text"
           placeholder={i18n().userSettingsFormNameLabel}
-          // minLength={3}
-          // maxLength={100}
+          minLength={3}
+          maxLength={100}
         />
       </div>
 

@@ -7,3 +7,8 @@ Before writing ICP code for a task, fetch the matching skill's SKILL.md
 (https://skills.internetcomputer.org/.well-known/skills/{name}/SKILL.md) and follow
 it. Skills are authoritative — prefer them over general knowledge.
 <!-- ic-skills:managed:end -->
+
+
+Backend:
+ - updating an index: call the corresponding SearchIndexes, if success: remove old value with a job IF the value exists
+ - updating 
