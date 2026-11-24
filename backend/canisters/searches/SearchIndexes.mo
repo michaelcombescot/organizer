@@ -28,7 +28,9 @@ shared ({ caller }) actor class SearchIndexes() = this {
 
   // ===== HANDLERS =====
 
-  public query func getAllKeys() : async Result<[(ReqKind.ReqKind, [Text])], ErrHandler> {
+  public query ({caller}) func getAllKeys() : async Result<[(ReqKind.ReqKind, [Text])], ErrHandler> {
+    switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
+
     #ok(memQuery.entries().map(func ((kind, map)) = (kind, map.keys().toArray())).toArray())
   };
 
@@ -42,11 +44,12 @@ shared ({ caller }) actor class SearchIndexes() = this {
     let resp = List.empty<Loc.Loc>();
 
     for (kind in requests.kinds.values()) {
-      let r = requests.text;
+      let r = normalizeText(requests.text);
       let ?map = memQuery.get(kind) else { continue };
 
       map
         .entriesFrom(r)
+        .filter(func ((key, _)) = key.startsWith(#text r))
         .map(func ((_, d)) = d )
         .take(limit)
         .forEach(func (loc) = resp.add(loc));
@@ -56,6 +59,8 @@ shared ({ caller }) actor class SearchIndexes() = this {
   };
 
   public shared ({ caller }) func handlerSaveEntry({ kind: ReqKind.ReqKind; owner: Loc.LocOwner; key: Text }) : async Result<(), Errors.ErrHandler> {
+    if (key == "") return #err(#errBadRequest("Key cannot be empty"));
+    
     switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let map = switch ( memQuery.get(kind) ) {
@@ -67,11 +72,13 @@ shared ({ caller }) actor class SearchIndexes() = this {
       }
     };
       
-    if ( map.containsKey(key) ) return #err(#errIndexAlreadyExists);
+    let normalizedKey = normalizeText(key);
+
+    if ( map.containsKey(normalizedKey) ) return #err(#errIndexAlreadyExists);
 
     let ?callerIndex = memKnownCanisters.get(caller) else return #err(#errNotFound("Caller is not a known canister"));
 
-    map.add(key, { bucket = callerIndex; owner = owner });
+    map.add(normalizedKey, { bucket = callerIndex; owner = owner });
 
     #ok(());
   };
@@ -80,8 +87,14 @@ shared ({ caller }) actor class SearchIndexes() = this {
     switch ( canAccess(caller) ) { case(#ok) (); case(#err(e)) return #err(e); };
 
     let ?map = memQuery.get(kind) else { return #ok };
-    map.remove(key);
+    map.remove(normalizeText(key));
 
     #ok
+  };
+
+  // ===== HELPERS =====
+
+  func normalizeText(text: Text) : Text {
+    text.toLower().trim(#char ' ')
   };
 }

@@ -1,30 +1,15 @@
-import { useDeepSignal } from "deepsignal";
 import { i18n } from "../../i18n/i18n";
-import { useSignal } from "@preact/signals";
-import type { ErrHandler } from "../../backend/api/BucketUsers";
+import { Signal, useSignal } from "@preact/signals";
+import type { PublicUser } from "../../backend/api/BucketUsers";
 import { SearchIndexesActor } from "../../backend/actors/searchIndexes";
 
 export default function UserSearchForm() {
-  const formData = useDeepSignal({
-    key: "",
-  });
+  console.log("UserSearchForm rendered");
 
-  const formErrors = useSignal<ErrHandler[]>([]);
+  const users = useSignal<PublicUser[]>([]);
 
   let submitForm = async (e: Event) => {
     e.preventDefault();
-    // let resp = await (await actorBucketUsersCurrent()).handlerUpdateUser({
-    //   name: formData.name,
-    //   email: formData.email
-    // });
-
-    // if (resp && "ok" in resp) {
-    //   stateModal.value = { visible: false, content: null };
-    //   stateUserData.userData.email = formData.email;
-    //   stateUserData.userData.name = formData.name;
-    // } else if (resp && "err" in resp) {
-    //   formErrors.value.push(resp.err);
-    // }
   };
 
   return (
@@ -35,11 +20,9 @@ export default function UserSearchForm() {
         <label for="name">{i18n().userFormSearchKey}</label>
         <input
           id="name"
-          value={formData.key}
           onInput={async (e) => { 
-            let resp = await new SearchIndexesActor().searchUsersFromText(e.currentTarget.value)
-
-            debugger
+            const resp = await new SearchIndexesActor().searchUsersFromText(e.currentTarget.value);
+            users.value = resp;
           }}
           type="text"
           placeholder={i18n().userSettingsFormNameLabel}
@@ -48,10 +31,21 @@ export default function UserSearchForm() {
         />
       </div>
 
-      <div>
-      </div>
+      <UserResults users={users} />
 
       <button type="submit">{i18n().userSettingsFormSaveButton}</button>
     </form>
+  );
+}
+
+function UserResults({ users }: { users: Signal<PublicUser[]> }) {
+  return (
+    <ul>
+      {users.value?.map((user) => (
+        <li key={user.principal.toText()} id={user.principal.toText()}>
+          <p>{user.name} ({user.email})</p>
+        </li>
+      ))}
+    </ul>
   );
 }

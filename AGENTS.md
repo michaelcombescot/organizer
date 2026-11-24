@@ -10,5 +10,4 @@ it. Skills are authoritative — prefer them over general knowledge.
 
 
 Backend:
- - updating an index: call the corresponding SearchIndexes, if success: remove old value with a job IF the value exists
- - updating 
+ - updating an index: call the corresponding SearchIndexes, if success: remove old value with a an async task

@@ -19,12 +19,12 @@ module {
   public func validate(self : User) : Result<(), [ErrValidation]> {
     let errors = List.empty<ErrValidation>();
 
-    if (self.name.size() < 3 or self.name.size() > 100) {
+    if (self.name != "" and (self.name.size() < 3 or self.name.size() > 100)) {
       errors.add(#badLength({ field = "name"; min = 3; max = 100 }));
     };
     
-    if (self.email.size() < 3 or self.email.size() > 100) {
-      errors.add(#badLength({ field = "email"; min = 5; max = 100 }));
+    if (self.email != "" and (self.email.size() < 3 or self.email.size() > 100)) {
+      errors.add(#badLength({ field = "email"; min = 3; max = 100 }));
     };
 
     if (errors.size() > 0) {

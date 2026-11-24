@@ -45,6 +45,17 @@ shared ({ caller }) actor class BucketUsers() = this {
 
   // ===== HANDLERS =====
 
+  public query ({ caller }) func handlerGetAllUsers() : async Result<[PublicUser], ErrHandler> {
+    switch(callerIsIdentified(caller)) { case (#ok) (); case (#err(e)) return #err(e); };
+
+    let users = List.empty<PublicUser>();
+    for (user in memUsers.values()) {
+      users.add(user.toPublic(caller));
+    };
+
+    #ok(users.toArray());
+  };
+
   public query ({caller}) func handlerGetUsersPublicData(usersPrincipals: [Principal]) : async Result<[PublicUser], ErrHandler> {
     switch(callerIsIdentified(caller)) { case (#ok) (); case (#err(e)) return #err(e); };
     if ( Array.size(usersPrincipals) > 50 ) return #err(#errBadRequest("Too many principals requested"));
@@ -103,50 +114,26 @@ shared ({ caller }) actor class BucketUsers() = this {
   }) : async Result<(), ErrHandler> {
     let ?user = memUsers.get(caller) else return #err(#errNotFound("User not found"));
 
-    var updatedUser = { user with name; email;updatedAt = Time.now() };
+    let updatedUser = { user with name; email; updatedAt = Time.now() };
     switch (updatedUser.validate()) { case (#ok(())) (); case (#err(e)) return #err(#errValidation(e)) };
 
     try {
       switch (acquireGuard(caller)) { case (#ok(())) (); case (#err(e)) return #err(e); };
 
-      // Save indexes
-      let jobIndexName = #jobBucketUsers(#updateUserIndex({ kind = #usersByName ; key = name; owner = #principal(caller) }));
-      let futureName = executeJob(jobIndexName);
-
-      let jobIndexEmail = #jobBucketUsers(#updateUserIndex({ kind = #usersByEmail ; key = email; owner = #principal(caller) }));
-      let futureEmail = executeJob(jobIndexEmail);
-      
-      let errors = List.empty<ErrValidation>();
-
-      if ( user.name != name ) {
-        switch ( await futureName ) {
-          case (#ok(())) { 
-            updatedUser := { updatedUser with name = user.name };
-            ignore createAndProcessJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByName; key = user.name })));
-          };
-          case (#err(e)) {
-            if ( e != #errIndexAlreadyExists ) return #err(e);
-            errors.add(#alreadyExists { field = "name" });
-          };
+      if ( user.name != name and name != "" ) {
+        switch (await executeJob(#jobBucketUsers(#updateUserIndex({ kind = #usersByName ; key = name; owner = #principal(caller) })))) {
+          case (#ok(())) ignore executeJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByName ; key = user.name; })));
+          case (#err(_)) return #err(#errValidation([#alreadyExists { field = "name" }]));
         };
       };
 
-      if ( user.email != email ) {
-        switch ( await futureEmail ) {
-          case (#ok(())) { 
-            updatedUser := { updatedUser with email = user.email };
-            ignore createAndProcessJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByEmail; key = user.email })));
-          };
-          case (#err(e)) {
-            if ( e != #errIndexAlreadyExists ) return #err(e);
-            errors.add(#alreadyExists { field = "email" });
-          };
+      if ( user.email != email and email != "" ) {
+        switch (await executeJob(#jobBucketUsers(#updateUserIndex({ kind = #usersByEmail ; key = email; owner = #principal(caller) })))) {
+          case (#ok(())) ignore executeJob(#jobBucketUsers(#removeUserIndex({ kind = #usersByEmail ; key = user.email; })));
+          case (#err(_)) return #err(#errValidation([#alreadyExists { field = "email" }]));
         };
       };
 
-      if ( not errors.isEmpty() ) return #err(#errValidation(errors.toArray()));
-
-      // save user
       memUsers.add(caller, updatedUser);
     } catch e {
       return #err(#errInterCanisterCall(e.message()));

@@ -33,6 +33,10 @@ export class SearchIndexesActor {
   }
 
   async searchUsersFromText(text: string) {
+    if (!text || text.trim() === "") {
+      return [];
+    }
+
     const actor = this.createActor(text);
 
     // 1. Retrieve localisation of matched users
@@ -47,12 +51,8 @@ export class SearchIndexesActor {
         ] satisfies ReqKind[],
       }
     });
-    
-    debugger
 
-    if (resSearch && "err" in resSearch) {
-      throw new Error(`Search failed or returned no results: ${JSON.stringify(resSearch.err)}`);
-    }
+    if (resSearch && "err" in resSearch) return [];
 
     const locs = resSearch.ok
 
@@ -61,14 +61,30 @@ export class SearchIndexesActor {
     }
 
     // 2. Retrieve real bucket Principals
-    const buckets = await (await (actorIndexMain())).handlerGetBucketUsers(locs);
+    var buckets = await (await (actorIndexMain())).handlerGetBucketUsers(locs);
     if (buckets && "err" in buckets) {
       throw new Error(`Failed to get bucket users: ${JSON.stringify(buckets.err)}`);
     }
 
     // 3. Retrieve public data for each user in the buckets
-    const fetchPromises = buckets.ok.map(async (bucket) => (await actorBucketUsers(bucket)).handlerGetUsersPublicData([bucket]));
+    const fetchPromises = buckets.ok.map(async (bucket) => {
+      let principals = bucket.users.map((owner) => {
+        if (owner.__kind__ !== "principal") {
+          throw new Error(`Unexpected user owner kind: ${owner.__kind__}`);
+        }
 
-    return await Promise.all(fetchPromises)
+        return owner.principal;
+      });
+
+      return (await actorBucketUsers(bucket.bucket)).handlerGetUsersPublicData(principals);
+    });
+
+    let users = (await Promise.all(fetchPromises)).map((res) => res && "ok" in res ? res.ok : []).flat();
+
+    return [
+      ...new Map(
+        users.map((user) => [user.principal.toText(), user])
+      ).values(),
+    ]
   }
 }

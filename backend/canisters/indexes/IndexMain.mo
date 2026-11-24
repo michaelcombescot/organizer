@@ -23,22 +23,28 @@ shared ({ caller }) actor class IndexMain() = this {
 
   // ===== HANDLERS =====
 
-  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.Loc]) : async Result<[Principal], ErrHandler> {
+  public query ({ caller }) func handlerGetBucketUsers(locs: [Loc.Loc]) : async Result<[{bucket: Principal; users: [Loc.LocOwner]}], ErrHandler> {
     if ( updateMappingOngoing ) return #err(#errUpdateOngoing);
     if ( caller.isAnonymous() ) return #err(#errForbidden);
 
     let ?map = memMapping.get(#dynamic(#orderedByHash(#bucketUsers))) else return #err(#errNotFound("Failed to find mapping for bucket users"));
 
-    let results = List.empty<Principal>();
+    let results = Map.empty<Principal, List.List<Loc.LocOwner>>();
     for (loc in locs.values()) {
       switch (map.get(loc.bucket)) {
-        case (?principal) results.add(principal);
-        case null {};
-      }
-      
+        case (?bucketPrincipal) {
+          let ?list = results.get(bucketPrincipal) else {
+            results.add(bucketPrincipal, List.singleton<Loc.LocOwner>(loc.owner));
+            continue
+          };
+          list.add(loc.owner);
+        } 
+        case (null) ();
+      };
     };
 
-    #ok(results.toArray());
+    let resp = results.entries().map(func ((bucket, owners)) = { bucket = bucket; users = owners.toArray() }).toArray();
+    #ok(resp);
   };
 
   public query ({ caller }) func handlerGetSearchIndexes() : async Result<[(Nat, Principal)], ErrHandler> {
