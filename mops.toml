@@ -3,7 +3,7 @@ core = "2.6.2"
 ic = "4.2.0"
 
 [toolchain]
-moc = "2.0.0"
+moc = "2.2.4" # mops toolchain update moc / mops toolchain use moc <version>
 
 [canisters.Admin]
 main = "backend/canisters/admin/Admin.mo"
